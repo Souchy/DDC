@@ -17,3 +17,11 @@ public static class ConverterExtensions
         return data._items.Take(data.Count).Select(converter.Convert).ToArray();
     }
 }
+
+public static class ILListExtensions
+{
+    public static List<T> ToList<T>(this Il2CppSystem.Collections.Generic.List<T> il2list)
+    {
+        return il2list._items.ToList();
+    }
+}

@@ -1,4 +1,5 @@
 ﻿using Core.DataCenter;
+using Core.DataCenter.Metadata.Alliance;
 using Core.DataCenter.Metadata.Effect;
 using Core.DataCenter.Metadata.Item;
 using Core.DataCenter.Metadata.Monster;
@@ -17,46 +18,51 @@ using System.Xml.Linq;
 namespace DDC.Extractor;
 public class ExtractRoots
 {
-    public static List<Type> rootTypes = []; // [typeof(Monsters), typeof(Items), typeof(Spells), typeof(SpellLevels), typeof(ItemTypes), typeof(ItemSuperTypes), typeof(Effects)];
+    public static List<Type> rootTypes = []; //[typeof(Monsters), typeof(Items), typeof(Spells), typeof(SpellLevels), typeof(ItemTypes), typeof(ItemSuperTypes), typeof(Effects)];
     public const int FAST_TAKES = 5;
-    public static async Task GetAllRoots()
+
+    public static List<(IEnumerable items, ICollection items2, Type itemType, MethodInfo methAdd)> FindRoots()
+    {
+        var roots = typeof(DataCenterModule).GetProperties().Where(p => p.Name.EndsWith("Root")).
+            Select(prop =>
+            {
+                try
+                {
+                    return prop.GetValue(typeof(DataCenterModule));
+                }
+                catch (Exception ex)
+                {
+                    Extractor.Logger.LogWarning("Exception GetAllRoots (" + prop.Name + "): " + ex.Message); // + " -> " + ex.StackTrace);
+                    return null;
+                }
+            })
+            .Where(r => r != null)
+            .Select(v =>
+            {
+                var rootType = v.GetType();
+                var rootTypeBase = rootType.BaseType;
+                var meth0 = rootTypeBase.GetMethod("GetObjects");
+                var objects = meth0.Invoke(v, []);
+                Extractor.Logger.LogInfo($"Transforming root objects: " + objects + ": " + objects?.GetType().FullName);
+                var items = objects.GetType().GetProperty("_items").GetValue(objects) as IEnumerable;
+                var size = objects.GetType().GetProperty("_size").GetValue(objects);
+                Extractor.Logger.LogInfo($"Transforming root items (" + size + "): " + items + ": " + items?.GetType().FullName);
+                var itemType = items.GetType().GenericTypeArguments[0];
+                Extractor.Logger.LogInfo($"Transforming root list type:  {itemType.Name}"); // + items.Count);
+                var genericType = GetCorrespondingType(items.GetType());
+                Extractor.Logger.LogInfo($"Transforming root new list type: " + genericType.FullName);
+                var items2 = Activator.CreateInstance(genericType) as ICollection;
+                var methAdd = genericType.GetMethod("Add");
+                rootTypes.Add(itemType);
+                return (items, items2, itemType, methAdd);
+            })
+            .ToList();
+        return roots;
+    }
+    public static async Task GetAllRoots(List<(IEnumerable items, ICollection items2, Type itemType, MethodInfo methAdd)> roots)
     {
         try
         {
-            var roots = typeof(DataCenterModule).GetProperties().Where(p => p.Name.EndsWith("Root")).
-                Select(prop =>
-                {
-                    try
-                    {
-                        return prop.GetValue(typeof(DataCenterModule));
-                    }
-                    catch (Exception ex)
-                    {
-                        Extractor.Logger.LogWarning("Exception GetAllRoots (" + prop.Name + "): " + ex.Message); // + " -> " + ex.StackTrace);
-                        return null;
-                    }
-                })
-                .Where(r => r != null)
-                .Select(v =>
-                {
-                    var rootType = v.GetType();
-                    var rootTypeBase = rootType.BaseType;
-                    var meth0 = rootTypeBase.GetMethod("GetObjects");
-                    var objects = meth0.Invoke(v, []);
-                    Extractor.Logger.LogInfo($"Transforming root objects: " + objects + ": " + objects?.GetType().FullName);
-                    var items = objects.GetType().GetProperty("_items")?.GetValue(objects) as IEnumerable;
-                    Extractor.Logger.LogInfo($"Transforming root items: " + items + ": " + items?.GetType().FullName);
-                    var itemType = items.GetType().GenericTypeArguments[0];
-                    Extractor.Logger.LogInfo($"Transforming root list type:  {itemType.Name}"); // + items.Count);
-                    var genericType = GetCorrespondingType(items.GetType());
-                    Extractor.Logger.LogInfo($"Transforming root new list type: " + genericType.FullName);
-                    var items2 = Activator.CreateInstance(genericType) as ICollection;
-                    var methAdd = genericType.GetMethod("Add");
-                    rootTypes.Add(itemType);
-                    return (items, items2, itemType, methAdd);
-                })
-                .Take(FAST_TAKES).ToList()
-            ;
             Extractor.Logger.LogInfo($"Extracting ROOTs (" + roots.Count() + ") =================");
 
             foreach (var root in roots)
@@ -83,6 +89,7 @@ public class ExtractRoots
             foreach (var item in items)
             {
                 if (item is null) continue;
+                if (count == FAST_TAKES) break;
                 count++;
                 var item2 = ConvertType(item.GetType(), item, count.ToString());
                 if (item2 != null)
@@ -145,8 +152,8 @@ public class ExtractRoots
                 return original.ToString();
 
             Type type2 = GetCorrespondingType(type1);
-            if(!string.IsNullOrEmpty(count))
-                Extractor.Logger.LogInfo($"Converting type: {type2.FullName}. " + count);
+            //if (!string.IsNullOrEmpty(count))
+            Extractor.Logger.LogInfo($"Converting type: {type2.FullName}. " + count);
             if (type1 == type2)
                 return original;
             //if (rootTypes.Contains(type2))
@@ -156,18 +163,26 @@ public class ExtractRoots
             var inst = Activator.CreateInstance(type2);
             foreach (var prop in inst.GetType().GetProperties())
             {
-                if (prop.Name.StartsWith("m_") && inst.GetType().GetProperty(prop.Name[2..]) != null)
+                try
                 {
-                    continue;
+                    if (prop.Name.StartsWith("m_") && inst.GetType().GetProperty(prop.Name[2..]) != null)
+                    {
+                        Extractor.Logger.LogInfo("ConvertingType skip prop \"m_\": " + prop.Name);
+                        continue;
+                    }
+                    var oProp = original.GetType().GetProperty(prop.Name);
+                    if (oProp == null)
+                    {
+                        //Extractor.Logger.LogInfo($"Converting property inst (" + inst + "), prop is null.");
+                        continue;
+                    }
+                    var val = ConvertProperty(original, oProp);
+                    prop.SetValue(inst, val);
                 }
-                var oProp = original.GetType().GetProperty(prop.Name);
-                if (oProp == null)
+                catch (Exception ex)
                 {
-                    //Extractor.Logger.LogInfo($"Converting property inst (" + inst + "), prop is null.");
-                    continue;
+                    Extractor.Logger.LogWarning($"Exception Converting type loop: " + ex.Message + " -> " + ex.StackTrace);
                 }
-                var val = ConvertProperty(original, oProp);
-                prop.SetValue(inst, val);
             }
             //Extractor.Logger.LogInfo($"Converted type.");
             return inst;
@@ -196,6 +211,9 @@ public class ExtractRoots
                 Extractor.Logger.LogError($"Converting property prop (" + prop + "), inst is null.");
                 return null;
             }
+            Extractor.Logger.LogInfo($"Converting property  " + prop.Name + ": " + prop.PropertyType.FullName);
+            if (prop.Name == "description")
+                return null;
             //Extractor.Logger.LogInfo($"Converting property {prop.Name}.");
             if (prop.PropertyType == typeof(Il2CppSystem.Object))
             {
@@ -208,12 +226,28 @@ public class ExtractRoots
             }
             if (prop.PropertyType.IsPrimitive)
             {
-                return prop.GetValue(inst);
+                try
+                {
+                    return prop.GetValue(inst);
+                }
+                catch (Exception ex)
+                {
+                    Extractor.Logger.LogError($"Exception Converting property primitive: " + ex.Message + " -> " + ex.StackTrace);
+                    return null;
+                }
             }
             else
-            if (prop.PropertyType == typeof(String))
+            if (prop.PropertyType == typeof(System.String))
             {
-                return prop.GetValue(inst);
+                try
+                {
+                    return prop.GetValue(inst);
+                }
+                catch (Exception ex)
+                {
+                    Extractor.Logger.LogError($"Exception Converting property string: " + ex.Message + " -> " + ex.StackTrace);
+                    return null;
+                }
             }
             else
             if (prop.PropertyType.Name == "MemoizedValues")

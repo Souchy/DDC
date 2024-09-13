@@ -14,6 +14,7 @@ using System.Windows.Markup;
 using System.Xml.Linq;
 using BepInEx.Unity.IL2CPP.Utils.Collections;
 using Core.DataCenter;
+using Core.DataCenter.Metadata.Alliance;
 using Core.DataCenter.Metadata.Breed;
 using Core.DataCenter.Metadata.Effect;
 using Core.DataCenter.Metadata.Effect.Instance;
@@ -112,7 +113,9 @@ public class ExtractorBehaviour : MonoBehaviour
 
         if (true)
         {
-            yield return WaitForCompletion(ExtractRoots.GetAllRoots());
+            var roots = ExtractRoots.FindRoots();
+            Extractor.Logger.LogMessage("Root types (" + ExtractRoots.rootTypes.Count + "): " + string.Join(", ", ExtractRoots.rootTypes.Select(t => t.Name)));
+            yield return WaitForCompletion(ExtractRoots.GetAllRoots(roots));
             //yield return WaitForCompletion(ExtractRoots.ExtractRoot(DataCenterModule.breedsRoot));
             //yield return WaitForCompletion(ExtractRoots.ExtractRoot(DataCenterModule.breedRolesRoot));
             //yield return WaitForCompletion(ExtractRoots.ExtractRoot(DataCenterModule.customModeBreedSpellsRoot));
@@ -167,7 +170,7 @@ public class ExtractorBehaviour : MonoBehaviour
 
         //Application.Quit(0);
     }
-    
+
     static async Task ExtractRaw<TData>(string filename, MetadataRoot<TData> root)
     {
         string dataTypeName = typeof(TData).Name;

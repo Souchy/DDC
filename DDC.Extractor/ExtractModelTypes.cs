@@ -187,6 +187,8 @@ public class ExtractModelTypes
 
                 if (prop.PropertyType.Name.EndsWith("Ptr") || prop.Name == "WasCollected") // || prop.Name.StartsWith("m_"))
                     continue;
+                if(prop.DeclaringType != type)
+                    continue;
                 //if (prop.GetGetMethod()?.IsVirtual ?? false)
                 //{
                 //    if (!prop.Name.Contains("_002"))

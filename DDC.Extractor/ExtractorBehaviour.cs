@@ -19,6 +19,7 @@ using Core.DataCenter.Metadata.Effect;
 using Core.DataCenter.Metadata.Effect.Instance;
 using Core.DataCenter.Metadata.Item;
 using Core.DataCenter.Metadata.Monster;
+using Core.DataCenter.Metadata.Quest;
 using Core.DataCenter.Metadata.Quest.TreasureHunt;
 using Core.DataCenter.Metadata.Spell;
 using Core.DataCenter.Metadata.Stat;
@@ -145,7 +146,7 @@ public class ExtractorBehaviour : MonoBehaviour
         }
         else
         {
-            yield return WaitForCompletion(ExtractModelTypes.getAllModels());
+            yield return WaitForCompletion(ExtractModelTypes.GetAllModels());
         }
 
         //yield return WaitForCompletion(ExtractData("ddc/item-super-types.json", DataCenterModule.itemSuperTypesRoot, new ItemSuperTypeConverter()));
@@ -166,7 +167,7 @@ public class ExtractorBehaviour : MonoBehaviour
 
         //Application.Quit(0);
     }
-
+    
     static async Task ExtractRaw<TData>(string filename, MetadataRoot<TData> root)
     {
         string dataTypeName = typeof(TData).Name;

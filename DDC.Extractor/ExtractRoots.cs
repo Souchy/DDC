@@ -15,47 +15,53 @@ using System.Threading.Tasks;
 using System.Xml.Linq;
 
 namespace DDC.Extractor;
-internal class ExtractRoots
+public class ExtractRoots
 {
-    public static List<Type> rootTypes = [typeof(Monsters), typeof(Items), typeof(Spells), typeof(SpellLevels), typeof(ItemTypes), typeof(ItemSuperTypes), typeof(Effects)];
-
+    public static List<Type> rootTypes = []; // [typeof(Monsters), typeof(Items), typeof(Spells), typeof(SpellLevels), typeof(ItemTypes), typeof(ItemSuperTypes), typeof(Effects)];
+    public const int FAST_TAKES = 5;
     public static async Task GetAllRoots()
     {
         try
         {
-            var roots = typeof(DataCenterModule).GetProperties().Where(p => p.Name.EndsWith("Root"));
-            //.Select(rootProp =>
-            //{
-            //    string r = "";
-            //    try
-            //    {
-            //        r = rootProp?.Name;
-            //        var type = rootProp.PropertyType;
-            //        r += ": " + type?.ToString();
-            //        if (type.GenericTypeArguments.Length > 0)
-            //        {
-            //            return type.ToString() + "<" + string.Join(", ", type.GenericTypeArguments.Select(a => a.Name)) + ">";
-            //        }
-            //        if (type.BaseType == null)
-            //            return type.ToString();
-            //        var basetype = type.BaseType;
-            //        if (basetype.GenericTypeArguments.Length > 0)
-            //        {
-            //            return basetype.ToString() + "<" + string.Join(", ", basetype.GenericTypeArguments.Select(a => a.Name)) + ">";
-            //        }
-            //        return type.ToString();
-            //    }
-            //    catch (Exception ex)
-            //    {
-            //        Extractor.Logger.LogInfo("Exception GetAllRoots iter (" + r + "): " + ex.Message + " -> " + ex.StackTrace);
-            //        return "";
-            //    }
-            //}).Where(s => s != "");
-            //Extractor.Logger.LogInfo("Roots: " + string.Join(", ", roots));
+            var roots = typeof(DataCenterModule).GetProperties().Where(p => p.Name.EndsWith("Root")).
+                Select(prop =>
+                {
+                    try
+                    {
+                        return prop.GetValue(typeof(DataCenterModule));
+                    }
+                    catch (Exception ex)
+                    {
+                        Extractor.Logger.LogWarning("Exception GetAllRoots (" + prop.Name + "): " + ex.Message); // + " -> " + ex.StackTrace);
+                        return null;
+                    }
+                })
+                .Where(r => r != null)
+                .Select(v =>
+                {
+                    var rootType = v.GetType();
+                    var rootTypeBase = rootType.BaseType;
+                    var meth0 = rootTypeBase.GetMethod("GetObjects");
+                    var objects = meth0.Invoke(v, []);
+                    Extractor.Logger.LogInfo($"Transforming root objects: " + objects + ": " + objects?.GetType().FullName);
+                    var items = objects.GetType().GetProperty("_items")?.GetValue(objects) as IEnumerable;
+                    Extractor.Logger.LogInfo($"Transforming root items: " + items + ": " + items?.GetType().FullName);
+                    var itemType = items.GetType().GenericTypeArguments[0];
+                    Extractor.Logger.LogInfo($"Transforming root list type:  {itemType.Name}"); // + items.Count);
+                    var genericType = GetCorrespondingType(items.GetType());
+                    Extractor.Logger.LogInfo($"Transforming root new list type: " + genericType.FullName);
+                    var items2 = Activator.CreateInstance(genericType) as ICollection;
+                    var methAdd = genericType.GetMethod("Add");
+                    rootTypes.Add(itemType);
+                    return (items, items2, itemType, methAdd);
+                })
+                .Take(FAST_TAKES).ToList()
+            ;
+            Extractor.Logger.LogInfo($"Extracting ROOTs (" + roots.Count() + ") =================");
 
             foreach (var root in roots)
             {
-                await ExtractRoot2(root);
+                await ExtractRoot2(root.items, root.items2, root.itemType, root.methAdd);
             }
             Extractor.Logger.LogInfo($"Extracting ROOTs DONE =================");
         }
@@ -64,37 +70,34 @@ internal class ExtractRoots
             Extractor.Logger.LogInfo("Exception GetAllRoots: " + ex.Message + " -> " + ex.StackTrace);
         }
     }
-    public static async Task ExtractRoot2(object root0 = null)
+    public static async Task ExtractRoot2(IEnumerable items, ICollection items2, Type itemType, MethodInfo methAdd) //object root0 = null)
     {
         try
         {
-            var objects = root0.GetType().GetMethod("GetObjects").Invoke(root0, []);
-            var items = objects.GetType().GetProperty("_items")?.GetValue(objects) as ICollection;
-            var type = items.GetType().GenericTypeArguments[0];
-            Extractor.Logger.LogInfo($"Extracting ROOT of type {type.Name}. " + items.Count);
-           
-            var genericType = GetCorrespondingType(items.GetType());
-            var items2 = Activator.CreateInstance(genericType) as ICollection;
-            var meth = genericType.GetMethod("Add");
+            var folder = itemType.Namespace.Replace(".", "/") + "/";
+            string path = Path.Join(Extractor.OutputDirectory, "ddc/json/" + folder);
+            Extractor.Logger.LogInfo($"Extracting ROOT of type {itemType.Name} to {path}.");
+
+            //var methAdd = items2.GetType().GetMethod("Add");
+            int count = 0;
             foreach (var item in items)
             {
                 if (item is null) continue;
-                var item2 = ConvertType(item.GetType(), item);
+                count++;
+                var item2 = ConvertType(item.GetType(), item, count.ToString());
                 if (item2 != null)
-                    meth.Invoke(items2, [item2]);
+                    methAdd.Invoke(items2, [item2]);
             }
-            var folder = type.Namespace.Replace(".", "/") + "/";
-            string path = Path.Join(Extractor.OutputDirectory, "ddc/json/" + folder);
             System.IO.Directory.CreateDirectory(path);
             Extractor.Logger.LogInfo($"Created Directory. " + path);
-            await using FileStream stream = File.OpenWrite(path + "/" + type.Name + ".json");
+            await using FileStream stream = File.OpenWrite(path + "/" + itemType.Name + ".json");
             await JsonSerializer.SerializeAsync(stream, items2, ExtractorBehaviour.JsonSerializerOptions);
             stream.Flush();
-            Extractor.Logger.LogInfo($"Extracted ROOT of type {type.Name} to {path}.");
+            Extractor.Logger.LogInfo($"Extracted ROOT of type {itemType.Name} to {path}.");
         }
         catch (Exception ex)
         {
-            Extractor.Logger.LogError($"Exception extract ROOT (" + root0.ToString() + "): " + ex.Message + " -> " + ex.StackTrace);
+            Extractor.Logger.LogError($"Exception extract ROOT (" + itemType.FullName + "): " + ex.Message + " -> " + ex.StackTrace);
         }
 
     }
@@ -106,7 +109,7 @@ internal class ExtractRoots
             string name = typeof(T).Name;
             MetadataRoot<T> root = root0; // DataCenterModule.GetDataRoot<MetadataRoot<T>>()
             Extractor.Logger.LogInfo($"Extracting ROOT of type {name}. " + root.GetObjects().Count);
-            var items = root.GetObjects()._items.Where(i => i != null).Take(5).ToList();
+            var items = root.GetObjects()._items.Where(i => i != null).Take(FAST_TAKES).ToList();
             int count = 0;
             var items2 = items.Select(i =>
             {
@@ -138,11 +141,12 @@ internal class ExtractRoots
     {
         try
         {
-            if (type1.FullName == "Il2CppSystem.Text.RegularExpressions.Regex")
+            if (type1.FullName.EndsWith("Regex")) // == "Il2CppSystem.Text.RegularExpressions.Regex") // FullName.EndsWith(".Regex")
                 return original.ToString();
 
             Type type2 = GetCorrespondingType(type1);
-            //Extractor.Logger.LogInfo($"Converting type: {type2.FullName}. " + count);
+            if(!string.IsNullOrEmpty(count))
+                Extractor.Logger.LogInfo($"Converting type: {type2.FullName}. " + count);
             if (type1 == type2)
                 return original;
             //if (rootTypes.Contains(type2))
@@ -317,7 +321,8 @@ internal class ExtractRoots
                 var listType = tbase.MakeGenericType(args);
                 return listType;
             }
-            if (type1.FullName == "Il2CppSystem.Text.RegularExpressions.Regex") return typeof(string);
+            if (type1.FullName.EndsWith("Regex")) return typeof(string);
+            //if (type1.FullName == "Il2CppSystem.Text.RegularExpressions.Regex") return typeof(string);
 
             Type type2 = Type.GetType("Generated." + type1.FullName + ", DDC");
             if (type2 == null) return type1;

@@ -1,47 +1,55 @@
-﻿using System;
+﻿using Core.DataCenter.Metadata.Item;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace DDC.Extractor;
-internal class ExtractModelTypes
+public class ExtractModelTypes
 {
-    public static async Task getAllModels()
+    public static async Task GetAllModels()
     {
         //System.IO.Directory.Delete("C:\\Robyn\\Git\\ankama\\BPI\\DDC\\DDC\\Generated");
         //System.IO.Directory.Delete(Path.Join(Extractor.OutputDirectory, "ddc/cs/"));
         //System.IO.Directory.CreateDirectory(Path.Join(Extractor.OutputDirectory, "ddc/cs/"));
 
         var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+        var theAss = typeof(Items).Assembly;
         Extractor.Logger.LogInfo("====== ASSEMBLIES ======");
-        foreach (var ass in assemblies)
+        await extractAssembly(theAss);
+        //foreach (var ass in assemblies)
+        //{
+        //    if (ass.FullName == null || !ass.FullName.Contains("Ankama.Dofus.Core.DataCenter"))
+        //        continue;
+        //    await extractAssembly(ass);
+        //}
+        Extractor.Logger.LogInfo("====== DONE WRITE CSHARP ======");
+    }
+    static async Task extractAssembly(Assembly ass)
+    {
+        Extractor.Logger.LogInfo(ass.FullName);
+        Extractor.Logger.LogInfo("====== TYPES ======");
+        var types = ass.GetTypes();
+        //Extractor.Logger.LogInfo(string.Join(", ", types.Where(t => t.FullName.ToLower().StartsWith("Core.DataCenter.Metadata".ToLower())).Select(t => t.FullName)));
+        foreach (var t in types)
         {
-            if (ass.FullName == null || !ass.FullName.StartsWith("Ankama.Dofus.Core.DataCenter"))
+            if (t.IsGenericType)
                 continue;
-            Extractor.Logger.LogInfo(ass.FullName);
+            if (!(
+                t.FullName.ToLower().StartsWith("Core.DataCenter.Metadata".ToLower()) ||
+                t.FullName.ToLower().StartsWith("Core.DataCenter.Types".ToLower()) ||
+                t.FullName.ToLower().StartsWith("Metadata.Enums.".ToLower())
+                ))
+                continue;
+            if (t.FullName.EndsWith("Root") || t.Name.StartsWith("__")) // || t.Namespace.EndsWith(".Sound"))
+                continue;
+            Extractor.Logger.LogInfo(t.FullName);
 
-            Extractor.Logger.LogInfo("====== TYPES ======");
-            var types = ass.GetTypes();
-            //Extractor.Logger.LogInfo(string.Join(", ", types.Where(t => t.FullName.ToLower().StartsWith("Core.DataCenter.Metadata".ToLower())).Select(t => t.FullName)));
-            foreach (var t in types)
-            {
-                if (t.IsGenericType)
-                    continue;
-                if (!(
-                    t.FullName.ToLower().StartsWith("Core.DataCenter.Metadata".ToLower()) ||
-                    t.FullName.ToLower().StartsWith("Core.DataCenter.Types".ToLower()) ||
-                    t.FullName.ToLower().StartsWith("Metadata.Enums.".ToLower())
-                    ))
-                    continue;
-                if (t.FullName.EndsWith("Root") || t.Name.StartsWith("__")) // || t.Namespace.EndsWith(".Sound"))
-                    continue;
-                Extractor.Logger.LogInfo(t.FullName);
-
-                await WriteCSharp(t);
-                //await WriteProto(t);
-            }
+            await WriteCSharp(t);
+            //await WriteProto(t);
         }
     }
     static async Task WriteProto(Type type)
@@ -220,9 +228,11 @@ internal class ExtractModelTypes
         if (propType.StartsWith("Metadata.Enums")) propType = "Generated." + propType;
         else if (propType.StartsWith("Metadata.")) propType = type.Name;
 
+        if(propType.EndsWith("Regex"))
+            return typeof(string).FullName;
         propType = propType.Replace("Il2CppSystem.Object", "object");
-        propType = propType.Replace("Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppStringArray", "string[]");
-        propType = propType.Replace("Il2CppSystem.Text.RegularExpressions.Regex", "System.Text.RegularExpressions.Regex");
+        propType = propType.Replace("Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppStringArray", typeof(string).FullName + "[]");
+        //propType = propType.Replace("Il2CppSystem.Text.RegularExpressions.Regex", typeof(string).Name); //System.Text.RegularExpressions.Regex");
 
         if (propType.Contains("+"))
         {

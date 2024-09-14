@@ -41,12 +41,15 @@ public class ExtractModelTypes
             if (!(
                 t.FullName.ToLower().StartsWith("Core.DataCenter.Metadata".ToLower()) ||
                 t.FullName.ToLower().StartsWith("Core.DataCenter.Types".ToLower()) ||
-                t.FullName.ToLower().StartsWith("Metadata.Enums.".ToLower())
+                t.FullName.ToLower().StartsWith("Core.DataCenter.Interfaces".ToLower()) ||
+                t.FullName.ToLower().StartsWith("Metadata.Enums.".ToLower()) ||
+                t.FullName.ToLower().StartsWith("Metadata.Appearance.".ToLower())
+
                 ))
                 continue;
             if (t.FullName.EndsWith("Root") || t.Name.StartsWith("__")) // || t.Namespace.EndsWith(".Sound"))
                 continue;
-            Extractor.Logger.LogInfo(t.FullName);
+            //Extractor.Logger.LogInfo(t.FullName);
 
             await WriteCSharp(t);
             //await WriteProto(t);
@@ -106,6 +109,11 @@ public class ExtractModelTypes
                 str = typeToEnumString(type);
             }
             else
+            if (type.IsValueType)
+            {
+                str = typeToStructString(type);
+            }
+            else
             if (type.IsClass)
             {
                 str = typeToClassString(type);
@@ -127,23 +135,77 @@ public class ExtractModelTypes
     }
     static string typeToEnumString(Type type)
     {
-        StringBuilder sb = new StringBuilder();
-        sb.AppendLine("namespace Generated." + type.Namespace + ";");
-        sb.AppendLine($"public enum {type.Name} " + "{");
-        var values = type.GetEnumValues();
-        var names = type.GetEnumNames();
-
-        for (int i = 0; i < names.Length; i++)
+        try
         {
-            sb.Append('\t');
-            if (values.Length > 0)
-                sb.Append(values.GetValue(i));
-            else
+
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine("namespace Generated." + type.Namespace + ";");
+            sb.AppendLine($"public enum {type.Name} " + "{");
+            var names = type.GetEnumNames();
+            var values = type.GetEnumValues();
+            //var names1 = Enum.GetNames(type);
+            //var values1 = Enum.GetValues(type);
+
+            for (int i = 0; i < names.Length; i++)
+            {
+                sb.Append('\t');
                 sb.Append(names[i]);
-            sb.AppendLine(",");
+                sb.Append(" = ");
+                sb.Append(Convert.ToInt32(values.GetValue(i)));
+                sb.AppendLine(",");
+            }
+            sb.AppendLine("}");
+            return sb.ToString();
         }
-        sb.AppendLine("}");
-        return sb.ToString();
+        catch (Exception ex)
+        {
+            Extractor.Logger.LogError("Exception typeToEnumString (" + type.FullName + "): " + ex.Message + " -> " + ex.StackTrace);
+            return null;
+        }
+    }
+    static string typeToStructString(Type type)
+    {
+        try
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine("using UnityEngine;");
+            sb.AppendLine("namespace Generated." + type.Namespace + ";");
+
+            sb.Append($"public struct {type.Name} ");
+            sb.Append('{');
+            sb.AppendLine();
+
+            int i = 1;
+            foreach (var field in type.GetFields())
+            {
+
+                if (field.FieldType.Name.EndsWith("Ptr") || field.Name == "WasCollected") // || prop.Name.StartsWith("m_"))
+                    continue;
+                if (field.DeclaringType != type)
+                    continue;
+                if (field.Name.Contains(".")) //"_002")) // should be fixed by isVirtual
+                    continue;
+
+                sb.Append('\t');
+                sb.Append("public ");
+
+                var fieldType = ConvertTypeName(field.FieldType);
+
+                sb.Append(fieldType);
+                sb.Append(' ');
+                sb.Append(field.Name);
+                sb.Append(';'); //sb.Append(" { get; init; }");
+                sb.Append('\n');
+                i++;
+            }
+            sb.AppendLine("}");
+            return sb.ToString();
+        }
+        catch (Exception ex)
+        {
+            Extractor.Logger.LogError("Exception typeToStructString (" + type.FullName + "): " + ex.Message + " -> " + ex.StackTrace);
+            return null;
+        }
     }
     static string typeToClassString(Type type)
     {
@@ -151,11 +213,11 @@ public class ExtractModelTypes
         {
 
             StringBuilder sb = new StringBuilder();
-            sb.AppendLine("using Core.DataCenter.Interfaces;");
-            sb.AppendLine("using Core.DataCenter.Metadata;");
-            sb.AppendLine("using Core.DataCenter.Types;");
-            sb.AppendLine("using Metadata;");
-            sb.AppendLine("using Metadata.Enums;");
+            //sb.AppendLine("using Core.DataCenter.Interfaces;");
+            //sb.AppendLine("using Core.DataCenter.Metadata;");
+            //sb.AppendLine("using Core.DataCenter.Types;");
+            //sb.AppendLine("using Metadata;");
+            //sb.AppendLine("using Metadata.Enums;");
             sb.AppendLine("using UnityEngine;");
             //if(type.FullName == "SkinSlotsRules")
             //{
@@ -187,7 +249,7 @@ public class ExtractModelTypes
 
                 if (prop.PropertyType.Name.EndsWith("Ptr") || prop.Name == "WasCollected") // || prop.Name.StartsWith("m_"))
                     continue;
-                if(prop.DeclaringType != type)
+                if (prop.DeclaringType != type)
                     continue;
                 //if (prop.GetGetMethod()?.IsVirtual ?? false)
                 //{
@@ -218,7 +280,7 @@ public class ExtractModelTypes
         catch (Exception ex)
         {
             Extractor.Logger.LogError("Exception typeToClassString: " + ex.Message + " -> " + ex.StackTrace);
-            return "";
+            return null;
         }
     }
     static string ConvertTypeName(Type type)
@@ -226,11 +288,13 @@ public class ExtractModelTypes
         var propType = type.FullName;
         if (propType.StartsWith("Core.DataCenter.Metadata")) propType = "Generated." + propType;
         else if (propType.StartsWith("Core.DataCenter.Types")) propType = "Generated." + propType;
+        else if (propType.StartsWith("Core.DataCenter.Interfaces")) propType = "Generated." + propType;
         else if (propType.StartsWith("Core.")) propType = type.Name;
         if (propType.StartsWith("Metadata.Enums")) propType = "Generated." + propType;
+        if (propType.StartsWith("Metadata.Appearance")) propType = "Generated." + propType;
         else if (propType.StartsWith("Metadata.")) propType = type.Name;
 
-        if(propType.EndsWith("Regex"))
+        if (propType.EndsWith("Regex"))
             return typeof(string).FullName;
         propType = propType.Replace("Il2CppSystem.Object", "object");
         propType = propType.Replace("Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppStringArray", typeof(string).FullName + "[]");

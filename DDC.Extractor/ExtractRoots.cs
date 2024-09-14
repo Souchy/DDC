@@ -1,9 +1,17 @@
 ﻿using Core.DataCenter;
 using Core.DataCenter.Metadata.Alliance;
+using Core.DataCenter.Metadata.Appearance;
+using Core.DataCenter.Metadata.Breed;
+using Core.DataCenter.Metadata.Challenge;
 using Core.DataCenter.Metadata.Effect;
+using Core.DataCenter.Metadata.Idol;
 using Core.DataCenter.Metadata.Item;
 using Core.DataCenter.Metadata.Monster;
+using Core.DataCenter.Metadata.OptionalFeatures;
+using Core.DataCenter.Metadata.Progression;
+using Core.DataCenter.Metadata.Social;
 using Core.DataCenter.Metadata.Spell;
+using Core.DataCenter.Metadata.World;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -12,14 +20,18 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 
 namespace DDC.Extractor;
 public class ExtractRoots
 {
+    public static List<Type> dangerousTypes = [typeof(Idols), typeof(IdolsPresetIcons), typeof(SocialTagsTypes), typeof(SkinPositions)];
+    public static List<string> dangerousProperties = ["name", "undiacriticalName", "unDiacriticalName", "entityName", "durationString", "description", "theoreticalDescription", "descriptionForTooltip", "theoreticalDescriptionForTooltip", "theoreticalShortDescriptionForTooltip"];
     public static List<Type> rootTypes = []; //[typeof(Monsters), typeof(Items), typeof(Spells), typeof(SpellLevels), typeof(ItemTypes), typeof(ItemSuperTypes), typeof(Effects)];
     public const int FAST_TAKES = 5;
+    public const bool debug = false;
 
     public static List<(IEnumerable items, ICollection items2, Type itemType, MethodInfo methAdd)> FindRoots()
     {
@@ -43,14 +55,14 @@ public class ExtractRoots
                 var rootTypeBase = rootType.BaseType;
                 var meth0 = rootTypeBase.GetMethod("GetObjects");
                 var objects = meth0.Invoke(v, []);
-                Extractor.Logger.LogInfo($"Transforming root objects: " + objects + ": " + objects?.GetType().FullName);
+                //Extractor.Logger.LogInfo($"Transforming root objects: " + objects + ": " + objects?.GetType().FullName);
                 var items = objects.GetType().GetProperty("_items").GetValue(objects) as IEnumerable;
                 var size = objects.GetType().GetProperty("_size").GetValue(objects);
-                Extractor.Logger.LogInfo($"Transforming root items (" + size + "): " + items + ": " + items?.GetType().FullName);
+                //Extractor.Logger.LogInfo($"Transforming root items (" + size + "): " + items + ": " + items?.GetType().FullName);
                 var itemType = items.GetType().GenericTypeArguments[0];
-                Extractor.Logger.LogInfo($"Transforming root list type:  {itemType.Name}"); // + items.Count);
+                //Extractor.Logger.LogInfo($"Transforming root list type:  {itemType.Name}"); // + items.Count);
                 var genericType = GetCorrespondingType(items.GetType());
-                Extractor.Logger.LogInfo($"Transforming root new list type: " + genericType.FullName);
+                //Extractor.Logger.LogInfo($"Transforming root new list type: " + genericType.FullName);
                 var items2 = Activator.CreateInstance(genericType) as ICollection;
                 var methAdd = genericType.GetMethod("Add");
                 rootTypes.Add(itemType);
@@ -78,6 +90,8 @@ public class ExtractRoots
     }
     public static async Task ExtractRoot2(IEnumerable items, ICollection items2, Type itemType, MethodInfo methAdd) //object root0 = null)
     {
+        if (itemType == typeof(Idols))
+            return;
         try
         {
             var folder = itemType.Namespace.Replace(".", "/") + "/";
@@ -89,18 +103,18 @@ public class ExtractRoots
             foreach (var item in items)
             {
                 if (item is null) continue;
-                if (count == FAST_TAKES) break;
+                //if (count == FAST_TAKES) break;
                 count++;
                 var item2 = ConvertType(item.GetType(), item, count.ToString());
                 if (item2 != null)
                     methAdd.Invoke(items2, [item2]);
             }
             System.IO.Directory.CreateDirectory(path);
-            Extractor.Logger.LogInfo($"Created Directory. " + path);
+            //Extractor.Logger.LogInfo($"Created Directory. " + path);
             await using FileStream stream = File.OpenWrite(path + "/" + itemType.Name + ".json");
             await JsonSerializer.SerializeAsync(stream, items2, ExtractorBehaviour.JsonSerializerOptions);
             stream.Flush();
-            Extractor.Logger.LogInfo($"Extracted ROOT of type {itemType.Name} to {path}.");
+            Extractor.Logger.LogInfo($"Extracted ROOT of type {itemType.Name}. (" + count + ")");
         }
         catch (Exception ex)
         {
@@ -111,12 +125,14 @@ public class ExtractRoots
     public static async Task ExtractRoot<T>(MetadataRoot<T> root0 = null)
     //static void ExtractRoot<T>(MetadataRoot<T> root0 = null)
     {
+        if (typeof(T) == typeof(Idols))
+            return;
         try
         {
             string name = typeof(T).Name;
             MetadataRoot<T> root = root0; // DataCenterModule.GetDataRoot<MetadataRoot<T>>()
-            Extractor.Logger.LogInfo($"Extracting ROOT of type {name}. " + root.GetObjects().Count);
-            var items = root.GetObjects()._items.Where(i => i != null).Take(FAST_TAKES).ToList();
+            var items = root.GetObjects()._items.Where(i => i != null).ToList(); //.Take(FAST_TAKES).ToList();
+            Extractor.Logger.LogInfo($"Extracting ROOT of type {name}. (" + items.Count + "/" + root.GetObjects().Count + ")");
             int count = 0;
             var items2 = items.Select(i =>
             {
@@ -137,7 +153,7 @@ public class ExtractRoots
             //Extractor.Logger.LogMessage(json);
             //File.WriteAllText(path + "/" + name + ".json", json);
             //await File.WriteAllTextAsync(path + "/" + name + ".json", json);
-            Extractor.Logger.LogInfo($"Extracted ROOT of type {name} to {path}.");
+            Extractor.Logger.LogInfo($"Extracted ROOT of type {name} to {path}. (" + count + ")");
         }
         catch (Exception ex)
         {
@@ -148,28 +164,23 @@ public class ExtractRoots
     {
         try
         {
-            if (type1.FullName.EndsWith("Regex")) // == "Il2CppSystem.Text.RegularExpressions.Regex") // FullName.EndsWith(".Regex")
-                return original.ToString();
+            if (type1.FullName.EndsWith("Regex"))
+                return ((Il2CppSystem.Text.RegularExpressions.Regex) original).ToString();
 
             Type type2 = GetCorrespondingType(type1);
-            //if (!string.IsNullOrEmpty(count))
-            Extractor.Logger.LogInfo($"Converting type: {type2.FullName}. " + count);
+
+            if (debug)
+                Extractor.Logger.LogInfo($"ConvertingType: {type2.FullName}. " + count);
             if (type1 == type2)
                 return original;
-            //if (rootTypes.Contains(type2))
-            //{
-            //    return null;
-            //}
+
             var inst = Activator.CreateInstance(type2);
             foreach (var prop in inst.GetType().GetProperties())
             {
                 try
                 {
-                    if (prop.Name.StartsWith("m_") && inst.GetType().GetProperty(prop.Name[2..]) != null)
-                    {
-                        Extractor.Logger.LogInfo("ConvertingType skip prop \"m_\": " + prop.Name);
+                    if (ShouldSkipProperty(original, prop))
                         continue;
-                    }
                     var oProp = original.GetType().GetProperty(prop.Name);
                     if (oProp == null)
                     {
@@ -181,7 +192,7 @@ public class ExtractRoots
                 }
                 catch (Exception ex)
                 {
-                    Extractor.Logger.LogWarning($"Exception Converting type loop: " + ex.Message + " -> " + ex.StackTrace);
+                    Extractor.Logger.LogWarning($"Exception ConvertingType loop: " + ex.Message + " -> " + ex.StackTrace);
                 }
             }
             //Extractor.Logger.LogInfo($"Converted type.");
@@ -189,41 +200,70 @@ public class ExtractRoots
         }
         catch (Exception ex)
         {
-            Extractor.Logger.LogWarning($"Exception Converting type: " + ex.Message + " -> " + ex.StackTrace);
+            Extractor.Logger.LogWarning($"Exception ConvertingType: " + ex.Message + " -> " + ex.StackTrace);
             return null;
         }
     }
+
+    static bool ShouldSkipProperty(object inst, PropertyInfo prop)
+    {
+        if (inst == null)
+        {
+            Extractor.Logger.LogError($"Converting property prop (" + prop + "), inst is null.");
+            return true;
+        }
+        if (rootTypes.Contains(prop.PropertyType))
+        {
+            return true;
+        }
+        if (prop.PropertyType.Name == "SpellScripts")
+        {
+            //Extractor.Logger.LogError($"Skip weird, SpellScripts should be in rootTypes: " + prop.PropertyType.FullName);
+            return true;
+        }
+        if (prop.PropertyType == typeof(Il2CppSystem.Object))
+            return true;
+
+        // Skip properties that dont have a corresponding field
+        var staticField = inst.GetType().GetField("NativeFieldInfoPtr_" + prop.Name, BindingFlags.Static | BindingFlags.NonPublic);
+        if (staticField == null)
+        {
+            //Extractor.Logger.LogWarning("SKIP DANGEROUS PROPERTY (" + inst + "." + prop.Name + ") that doesnt have a static field");
+            //Extractor.Logger.LogMessage("fields: " + string.Join(", ", inst.GetType().GetFields(BindingFlags.Static | BindingFlags.NonPublic).Select(f => f.Name)));
+            //Extractor.Logger.LogMessage("Special/Collectible: " + prop.IsSpecialName + ", " + prop.IsCollectible);
+            //Extractor.Logger.LogMessage("GetMethod: " + prop.GetMethod + ", " + prop.GetGetMethod() + ", " + prop.GetMethod.Attributes + ", " + prop.GetMethod.IsPublic);
+            //Extractor.Logger.LogMessage("SetMethod: " + prop.SetMethod + ", " + prop.GetSetMethod() + ", " + prop.SetMethod.Attributes + ", " + prop.SetMethod.IsPublic);
+            //Extractor.Logger.LogMessage("Get attributes: " + string.Join(", ", prop.GetMethod.GetCustomAttributes().Select(a => a.ToString())));
+            //Extractor.Logger.LogMessage("Set attributes: " + string.Join(", ", prop.SetMethod.GetCustomAttributes().Select(a => a.ToString())));
+            return true;
+        }
+
+        //if (dangerousProperties.Contains(prop.Name))
+        //    return true;
+        //if (inst.GetType().GetProperty("m_" + prop.Name) != null)
+        //{
+        //    //Extractor.Logger.LogInfo("ConvertingType skip prop by _m: " + prop.Name);
+        //    return true;
+        //}
+        //if (inst.GetType().GetProperty(prop.Name + "Id") != null || inst.GetType().GetProperty(prop.Name + "Ids") != null)
+        //{
+        //    //Extractor.Logger.LogInfo("ConvertingType skip prop by Id: " + prop.Name);
+        //    return true;
+        //}
+        if (prop.PropertyType.Name == "MemoizedValues")
+        {
+            return true;
+        }
+        return false;
+    }
+
     static object? ConvertProperty(object inst, PropertyInfo prop)
     {
         try
         {
-            //if (prop == null)
-            //{
-            //    Extractor.Logger.LogInfo($"Converting property inst (" + inst + "), prop is null.");
-            //    return null;
-            //}
-            if (rootTypes.Contains(prop.PropertyType))
-            {
-                return null;
-            }
-            if (inst == null)
-            {
-                Extractor.Logger.LogError($"Converting property prop (" + prop + "), inst is null.");
-                return null;
-            }
-            Extractor.Logger.LogInfo($"Converting property  " + prop.Name + ": " + prop.PropertyType.FullName);
-            if (prop.Name == "description")
-                return null;
-            //Extractor.Logger.LogInfo($"Converting property {prop.Name}.");
-            if (prop.PropertyType == typeof(Il2CppSystem.Object))
-            {
-                return null;
-                //Extractor.Logger.LogInfo($"Converting property is Object: " + inst + ". " + prop.Name + " = " + prop.GetValue(inst)?.GetType().ToString());
-                //var val = prop.GetValue(inst);
-                //if (val == null) return val;
-                //var val2 = ConvertType(val.GetType(), val);
-                //return val2;
-            }
+            if (debug)
+                Extractor.Logger.LogInfo($"Converting property  " + inst + "." + prop.Name + ": " + prop.PropertyType.FullName);
+
             if (prop.PropertyType.IsPrimitive)
             {
                 try
@@ -250,11 +290,6 @@ public class ExtractRoots
                 }
             }
             else
-            if (prop.PropertyType.Name == "MemoizedValues")
-            {
-                return null;
-            }
-            else
             if (prop.PropertyType.IsGenericType)
             {
                 var val = prop.GetValue(inst);
@@ -272,10 +307,16 @@ public class ExtractRoots
                 if (prop.PropertyType.GenericTypeArguments.Length == 1)
                 {
                     //Extractor.Logger.LogInfo("ConvertingProperty list json: " + val.ToString() + " to " + list2);
-                    IEnumerable list1;
+
+                    IEnumerable list1 = null;
                     if (val is IEnumerable)
                     {
                         list1 = val as IEnumerable;
+                    }
+                    else if (val.GetType().Name.Contains("HashSet"))
+                    {
+                        // TODO HashSets unsupported for now. Only SpellScripts uses it and it's recursive anyway so we don't care.
+                        return null;
                     }
                     else
                     {

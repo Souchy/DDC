@@ -1,107 +1,114 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-    <PropertyGroup>
-        <TargetFramework>net6.0</TargetFramework>
-        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-        <LangVersion>latest</LangVersion>
-        <RestoreAdditionalProjectSources>
-            https://api.nuget.org/v3/index.json;
-            https://nuget.bepinex.dev/v3/index.json;
-            https://nuget.samboy.dev/v3/index.json
-        </RestoreAdditionalProjectSources>
-    </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>net6.0</TargetFramework>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<LangVersion>latest</LangVersion>
+		<RestoreAdditionalProjectSources>
+			https://api.nuget.org/v3/index.json;
+			https://nuget.bepinex.dev/v3/index.json;
+			https://nuget.samboy.dev/v3/index.json
+		</RestoreAdditionalProjectSources>
+	</PropertyGroup>
 
-    <ItemGroup>
-        <PackageReference Include="BepInEx.Unity.IL2CPP" Version="6.0.0-be.*" IncludeAssets="compile" />
-        <PackageReference Include="BepInEx.PluginInfoProps" Version="2.*" />
-    </ItemGroup>
-    
-    <ItemGroup>
-        <Reference Include="Il2CppMicrosoft.Extensions.Logging">
-          <HintPath>..\Interop\Il2CppMicrosoft.Extensions.Logging.dll</HintPath>
-        </Reference>
-        <Reference Include="Il2CppMicrosoft.Extensions.Logging.Abstractions">
-          <HintPath>..\Interop\Il2CppMicrosoft.Extensions.Logging.Abstractions.dll</HintPath>
-        </Reference>
-        <Reference Include="Il2CppMicrosoft.Extensions.Options">
-          <HintPath>..\Interop\Il2CppMicrosoft.Extensions.Options.dll</HintPath>
-        </Reference>
-        <Reference Include="Il2CppMono.Security">
-          <HintPath>..\Interop\Il2CppMono.Security.dll</HintPath>
-        </Reference>
-        <Reference Include="Il2CppSystem">
-          <HintPath>..\Interop\Il2CppSystem.dll</HintPath>
-        </Reference>
-        <Reference Include="Il2CppSystem.Collections.Immutable">
-          <HintPath>..\Interop\Il2CppSystem.Collections.Immutable.dll</HintPath>
-        </Reference>
-        <Reference Include="Il2CppSystem.Configuration">
-          <HintPath>..\Interop\Il2CppSystem.Configuration.dll</HintPath>
-        </Reference>
-        <Reference Include="Il2CppSystem.Core">
-          <HintPath>..\Interop\Il2CppSystem.Core.dll</HintPath>
-        </Reference>
-        <Reference Include="Il2CppSystem.Data">
-          <HintPath>..\Interop\Il2CppSystem.Data.dll</HintPath>
-        </Reference>
-        <Reference Include="Il2CppSystem.Drawing">
-          <HintPath>..\Interop\Il2CppSystem.Drawing.dll</HintPath>
-        </Reference>
-        <Reference Include="Il2CppSystem.Net.Http">
-          <HintPath>..\Interop\Il2CppSystem.Net.Http.dll</HintPath>
-        </Reference>
-        <Reference Include="Il2CppSystem.Numerics">
-          <HintPath>..\Interop\Il2CppSystem.Numerics.dll</HintPath>
-        </Reference>
-        <Reference Include="Il2CppSystem.Runtime.CompilerServices.Unsafe">
-          <HintPath>..\Interop\Il2CppSystem.Runtime.CompilerServices.Unsafe.dll</HintPath>
-        </Reference>
-        <Reference Include="Il2CppSystem.Runtime.Serialization">
-          <HintPath>..\Interop\Il2CppSystem.Runtime.Serialization.dll</HintPath>
-        </Reference>
-        <Reference Include="Il2CppSystem.Web">
-          <HintPath>..\Interop\Il2CppSystem.Web.dll</HintPath>
-        </Reference>
-        <Reference Include="Il2CppSystem.Xml">
-          <HintPath>..\Interop\Il2CppSystem.Xml.dll</HintPath>
-        </Reference>
-        <Reference Include="Il2CppSystem.Xml.Linq">
-          <HintPath>..\Interop\Il2CppSystem.Xml.Linq.dll</HintPath>
-        </Reference>
-        <Reference Include="UnityEngine">
-            <HintPath>..\Interop\UnityEngine.dll</HintPath>
-        </Reference>
-        <Reference Include="UnityEngine.CoreModule">
-            <HintPath>..\Interop\UnityEngine.CoreModule.dll</HintPath>
-        </Reference>
-        <Reference Include="Unity.ResourceManager">
-            <HintPath>..\Interop\Unity.ResourceManager.dll</HintPath>
-        </Reference>
-        <Reference Include="Unitask">
-            <HintPath>..\Interop\Unitask.dll</HintPath>
-        </Reference>
-        <Reference Include="Ankama.AddressableUtility.Runtime">
-            <HintPath>..\Interop\Ankama.AddressableUtility.Runtime.dll</HintPath>
-        </Reference>
-        <Reference Include="Core">
-            <HintPath>..\Interop\Core.dll</HintPath>
-        </Reference>
-        <Reference Include="Core.Localization">
-            <HintPath>..\Interop\Core.Localization.dll</HintPath>
-        </Reference>
-        <Reference Include="Ankama.Dofus.Core.DataCenter">
-            <HintPath>..\Interop\Ankama.Dofus.Core.DataCenter.dll</HintPath>
-        </Reference>
-        <Reference Include="Ankama.Dofus.Core.DataCenter">
-            <HintPath>..\Interop\Ankama.Dofus.Core.DataCenter.dll</HintPath>
-        </Reference>
-        <Reference Include="Il2Cppmscorlib">
-            <HintPath>..\Interop\Il2Cppmscorlib.dll</HintPath>
-        </Reference>
-    </ItemGroup>
-    
-    <ItemGroup>
-      <ProjectReference Include="..\DDC\DDC.csproj" />
-    </ItemGroup>
-    
+	<ItemGroup>
+		<PackageReference Include="BepInEx.Unity.IL2CPP" Version="6.0.0-be.*" IncludeAssets="compile" />
+		<PackageReference Include="BepInEx.PluginInfoProps" Version="2.*" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Reference Include="Il2CppMicrosoft.Extensions.Logging">
+			<HintPath>..\Interop\Il2CppMicrosoft.Extensions.Logging.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppMicrosoft.Extensions.Logging.Abstractions">
+			<HintPath>..\Interop\Il2CppMicrosoft.Extensions.Logging.Abstractions.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppMicrosoft.Extensions.Options">
+			<HintPath>..\Interop\Il2CppMicrosoft.Extensions.Options.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppMono.Security">
+			<HintPath>..\Interop\Il2CppMono.Security.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSystem">
+			<HintPath>..\Interop\Il2CppSystem.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSystem.Collections.Immutable">
+			<HintPath>..\Interop\Il2CppSystem.Collections.Immutable.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSystem.Configuration">
+			<HintPath>..\Interop\Il2CppSystem.Configuration.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSystem.Core">
+			<HintPath>..\Interop\Il2CppSystem.Core.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSystem.Data">
+			<HintPath>..\Interop\Il2CppSystem.Data.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSystem.Drawing">
+			<HintPath>..\Interop\Il2CppSystem.Drawing.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSystem.Net.Http">
+			<HintPath>..\Interop\Il2CppSystem.Net.Http.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSystem.Numerics">
+			<HintPath>..\Interop\Il2CppSystem.Numerics.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSystem.Runtime.CompilerServices.Unsafe">
+			<HintPath>..\Interop\Il2CppSystem.Runtime.CompilerServices.Unsafe.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSystem.Runtime.Serialization">
+			<HintPath>..\Interop\Il2CppSystem.Runtime.Serialization.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSystem.Web">
+			<HintPath>..\Interop\Il2CppSystem.Web.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSystem.Xml">
+			<HintPath>..\Interop\Il2CppSystem.Xml.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2CppSystem.Xml.Linq">
+			<HintPath>..\Interop\Il2CppSystem.Xml.Linq.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine">
+			<HintPath>..\Interop\UnityEngine.dll</HintPath>
+		</Reference>
+		<Reference Include="UnityEngine.CoreModule">
+			<HintPath>..\Interop\UnityEngine.CoreModule.dll</HintPath>
+		</Reference>
+		<Reference Include="Unity.ResourceManager">
+			<HintPath>..\Interop\Unity.ResourceManager.dll</HintPath>
+		</Reference>
+		<Reference Include="Unitask">
+			<HintPath>..\Interop\Unitask.dll</HintPath>
+		</Reference>
+		<Reference Include="Ankama.AddressableUtility.Runtime">
+			<HintPath>..\Interop\Ankama.AddressableUtility.Runtime.dll</HintPath>
+		</Reference>
+		<Reference Include="Core">
+			<HintPath>..\Interop\Core.dll</HintPath>
+		</Reference>
+		<Reference Include="Core.Localization">
+			<HintPath>..\Interop\Core.Localization.dll</HintPath>
+		</Reference>
+		<Reference Include="Ankama.Dofus.Core.DataCenter">
+			<HintPath>..\Interop\Ankama.Dofus.Core.DataCenter.dll</HintPath>
+		</Reference>
+		<Reference Include="Ankama.Dofus.Core.DataCenter">
+			<HintPath>..\Interop\Ankama.Dofus.Core.DataCenter.dll</HintPath>
+		</Reference>
+		<Reference Include="Il2Cppmscorlib">
+			<HintPath>..\Interop\Il2Cppmscorlib.dll</HintPath>
+		</Reference>
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\DDC\DDC.csproj" />
+	</ItemGroup>
+
+	<Target Name="CopyDlls" AfterTargets="AfterBuild">
+		<Copy SourceFiles="$(OutDir)\DDC.dll;$(OutDir)\DDC.extractor.dll" DestinationFolder="C:\Users\Blank\AppData\Local\Ankama\Dofus-beta\BepInEx\plugins" />
+	</Target>
+	<Target Name="PostBuildProcessing" AfterTargets="CopyDlls">
+		<Exec Command="C:\Users\Blank\AppData\Local\Ankama\Dofus-beta\Dofus.exe" />
+	</Target>
+
 </Project>

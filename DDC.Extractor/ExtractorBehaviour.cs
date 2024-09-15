@@ -56,36 +56,68 @@ public class ExtractorBehaviour : MonoBehaviour
     static IEnumerator StartCoroutine()
     {
         yield return Wait(1);
-
+        // missing targetMask dans effectinstance (enemis,alliés pour zones)
+        // EffectInstance.zoneDescr converting
+        // enum value converting
+        // remove properties that dont have fields from .cs
+        // remove static fields from .cs
         Extractor.Logger.LogInfo("Start extracting data...");
-        if (true)
+
+        if (false)
         {
-            //yield return WaitForCompletion(ExtractRoots.ExtractRoot(DataCenterModule.idolsRoot));
-            //yield return WaitForCompletion(ExtractRoots.ExtractRoot(DataCenterModule.idolsPresetIconsRoot));
-            //yield return WaitForCompletion(ExtractRoots.ExtractRoot(DataCenterModule.socialTagsTypesRoot));
-            //yield return WaitForCompletion(ExtractRoots.ExtractRoot(DataCenterModule.skinPositionsRoot));
+            yield return WaitForCompletion(ExtractModelTypes.GetAllModels());
+            Extractor.Logger.LogInfo("DDC model generation complete.");
+        }
+        else
+        {
+            var wep = Weapons.GetItemById(25219);
+            Extractor.Logger.LogWarning("wep: " + wep + ", " + wep.GetType() + ", " + wep.GetType().BaseType);
+
+            //DataCenterModule.LoadData();
+
+            //var weapons = DataCenterModule.GetDataRoot<MetadataRoot<Weapons>>();
+            //Extractor.Logger.LogWarning("weapons: " + weapons);
+            var baguette = DataCenterModule.itemsRoot.GetObjectById(25219);
+            Extractor.Logger.LogWarning("baguette: " + baguette.GetType() + ", " + baguette.GetType().BaseType);
+            //baguette.possibleEffects
+            //var weapons = DataCenterModule.itemsRoot.GetObjects()._items.Where(i => i is Weapons).ToList();
+            //Extractor.Logger.LogWarning("weapons: " + weapons.Count);
+            var vitality = baguette.possibleEffects._items.First(e => e.effectId == ActionId.CharacterBoostVitality);
+            Extractor.Logger.LogWarning("baguette effect: " + vitality + ", " + vitality.GetType());
+
+            //var weap = (Weapons) baguette;
+            //Extractor.Logger.LogWarning("weap: " + weap);
+            //baguette = DataCenterModule.s_itemsRootCached.GetObjectById(25219);
+            //Extractor.Logger.LogWarning("baguette: " + baguette.GetType() + ", " + baguette.GetType().BaseType);
+            //var weapons = DataCenterModule.s_itemsRootCached.GetObjects()._items.Where(i => i is Weapons).ToList();
+            //Extractor.Logger.LogWarning("weapons: " + weapons.Count);
+
+
+            //Extractor.Logger.LogMessage("Root types (" + ExtractRoots.rootTypes.Count + "): " + string.Join(", ", ExtractRoots.rootTypes.Select(t => t.Name)));
+            //var spellLevel = DataCenterModule.spellLevelsRoot.GetObjectById(41053); //12984);
+            //var eff = spellLevel.effects[0];
+            //Extractor.Logger.LogInfo($"SpellLevel.EffectInstance: {eff.spellId}, e {eff.effectId}, {eff.effectUid}, c {eff.category}, z {eff.zoneDescr}={eff.zoneDescr.param1}x{eff.zoneDescr.shape}, // {eff.zoneSize}, {eff.zoneShape}");
+            //var spellLevel2 = (Generated.Core.DataCenter.Metadata.Spell.SpellLevels) ExtractRoots.ConvertType(spellLevel.GetType(), spellLevel);
+            //var eff2 = spellLevel2.effects[0];
+            //Extractor.Logger.LogInfo($"SpellLevel2.EffectInstance: {eff2.spellId}, e {eff2.effectId}, {eff2.effectUid}, c {eff2.category}, z {eff2.zoneDescr}={eff2.zoneDescr.param1}x{eff2.zoneDescr.shape}, // {eff2.zoneSize}, {eff2.zoneShape}");
+            //var eff3 = (Generated.Core.DataCenter.Metadata.Effect.EffectInstance) ExtractRoots.ConvertType(eff.GetType(), eff);
+            //Extractor.Logger.LogInfo($"EffectInstance2: {eff3.spellId}, e {eff3.effectId}, {eff3.effectUid}, c {eff3.category}, z {eff3.zoneDescr}={eff3.zoneDescr.param1}x{eff3.zoneDescr.shape}, // {eff3.zoneSize}, {eff3.zoneShape}");
+
             ExtractRoots.rootTypes.Add(typeof(Idols));
             ExtractRoots.rootTypes.Add(typeof(IdolsPresetIcons));
             ExtractRoots.rootTypes.Add(typeof(SocialTagsTypes));
             ExtractRoots.rootTypes.Add(typeof(SkinPositions));
-            //DataCenterModule.LoadData();
-            var roots = ExtractRoots.FindRoots();
-            Extractor.Logger.LogMessage("Root types (" + ExtractRoots.rootTypes.Count + "): " + string.Join(", ", ExtractRoots.rootTypes.Select(t => t.Name)));
-            yield return WaitForCompletion(ExtractRoots.GetAllRoots(roots));
+            //var roots = ExtractRoots.FindRoots();
+            //yield return WaitForCompletion(ExtractRoots.GetAllRoots(roots));
+            //yield return WaitForCompletion(ExtractLocale("ddc/json/i18n/de.i18n.json", "Dofus_Data/StreamingAssets/Content/I18n/de.bin"));
+            //yield return WaitForCompletion(ExtractLocale("ddc/json/i18n/en.i18n.json", "Dofus_Data/StreamingAssets/Content/I18n/en.bin"));
+            //yield return WaitForCompletion(ExtractLocale("ddc/json/i18n/es.i18n.json", "Dofus_Data/StreamingAssets/Content/I18n/es.bin"));
+            //yield return WaitForCompletion(ExtractLocale("ddc/json/i18n/fr.i18n.json", "Dofus_Data/StreamingAssets/Content/I18n/fr.bin"));
+            //yield return WaitForCompletion(ExtractLocale("ddc/json/i18n/pt.i18n.json", "Dofus_Data/StreamingAssets/Content/I18n/pt.bin"));
+            //Extractor.Logger.LogInfo("DDC data extraction complete.");
         }
-        else
-        {
-            yield return WaitForCompletion(ExtractModelTypes.GetAllModels());
-        }
-        yield return WaitForCompletion(ExtractLocale("ddc/json/i18n/de.i18n.json", "Dofus_Data/StreamingAssets/Content/I18n/de.bin"));
-        yield return WaitForCompletion(ExtractLocale("ddc/json/i18n/en.i18n.json", "Dofus_Data/StreamingAssets/Content/I18n/en.bin"));
-        yield return WaitForCompletion(ExtractLocale("ddc/json/i18n/es.i18n.json", "Dofus_Data/StreamingAssets/Content/I18n/es.bin"));
-        yield return WaitForCompletion(ExtractLocale("ddc/json/i18n/fr.i18n.json", "Dofus_Data/StreamingAssets/Content/I18n/fr.bin"));
-        yield return WaitForCompletion(ExtractLocale("ddc/json/i18n/pt.i18n.json", "Dofus_Data/StreamingAssets/Content/I18n/pt.bin"));
 
-        Extractor.Logger.LogInfo("DDC data extraction complete.");
-
-        Application.Quit(0);
+        //Application.Quit(0);
     }
 
     static async Task ExtractLocale(string filename, string binFile)
@@ -107,6 +139,9 @@ public class ExtractorBehaviour : MonoBehaviour
         Models.I18N.LocalizationTable localizationTable = new() { LanguageCode = table.m_header.languageCode, Entries = entries };
 
         string path = Path.Join(Extractor.OutputDirectory, filename);
+        var folder = path[0..path.LastIndexOf("/")];
+        System.IO.Directory.CreateDirectory(folder);
+
         await using FileStream stream = File.OpenWrite(path);
         await JsonSerializer.SerializeAsync(stream, localizationTable, JsonSerializerOptions);
         stream.Flush();

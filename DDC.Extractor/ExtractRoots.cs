@@ -6,6 +6,7 @@ using Core.DataCenter.Metadata.Challenge;
 using Core.DataCenter.Metadata.Effect;
 using Core.DataCenter.Metadata.Idol;
 using Core.DataCenter.Metadata.Item;
+using Core.DataCenter.Metadata.Job;
 using Core.DataCenter.Metadata.Monster;
 using Core.DataCenter.Metadata.OptionalFeatures;
 using Core.DataCenter.Metadata.Progression;
@@ -28,7 +29,7 @@ namespace DDC.Extractor;
 public class ExtractRoots
 {
     public static List<Type> dangerousTypes = [typeof(Idols), typeof(IdolsPresetIcons), typeof(SocialTagsTypes), typeof(SkinPositions)];
-    public static List<string> dangerousProperties = ["name", "undiacriticalName", "unDiacriticalName", "entityName", "durationString", "description", "theoreticalDescription", "descriptionForTooltip", "theoreticalDescriptionForTooltip", "theoreticalShortDescriptionForTooltip"];
+    //public static List<string> dangerousProperties = ["name", "undiacriticalName", "unDiacriticalName", "entityName", "durationString", "description", "theoreticalDescription", "descriptionForTooltip", "theoreticalDescriptionForTooltip", "theoreticalShortDescriptionForTooltip"];
     public static List<Type> rootTypes = []; //[typeof(Monsters), typeof(Items), typeof(Spells), typeof(SpellLevels), typeof(ItemTypes), typeof(ItemSuperTypes), typeof(Effects)];
     public const int FAST_TAKES = 5;
     public const bool debug = false;
@@ -40,6 +41,10 @@ public class ExtractRoots
             {
                 try
                 {
+                    //if (prop.Name != "itemsRoot") // && prop.Name != "spellsRoot" && prop.Name != nameof(DataCenterModule.spellLevelsRoot))
+                    //    return null;
+
+
                     return prop.GetValue(typeof(DataCenterModule));
                 }
                 catch (Exception ex)
@@ -71,11 +76,16 @@ public class ExtractRoots
             .ToList();
         return roots;
     }
+
     public static async Task GetAllRoots(List<(IEnumerable items, ICollection items2, Type itemType, MethodInfo methAdd)> roots)
     {
         try
         {
             Extractor.Logger.LogInfo($"Extracting ROOTs (" + roots.Count() + ") =================");
+
+            string path = Path.Join(Extractor.OutputDirectory, "ddc/json/");
+            if (Directory.Exists(path))
+                Directory.Delete(path, true);
 
             foreach (var root in roots)
             {
@@ -88,9 +98,10 @@ public class ExtractRoots
             Extractor.Logger.LogInfo("Exception GetAllRoots: " + ex.Message + " -> " + ex.StackTrace);
         }
     }
+
     public static async Task ExtractRoot2(IEnumerable items, ICollection items2, Type itemType, MethodInfo methAdd) //object root0 = null)
     {
-        if (itemType == typeof(Idols))
+        if (dangerousTypes.Contains(itemType))
             return;
         try
         {
@@ -105,7 +116,7 @@ public class ExtractRoots
                 if (item is null) continue;
                 //if (count == FAST_TAKES) break;
                 count++;
-                var item2 = ConvertType(item.GetType(), item, count.ToString());
+                var item2 = ConvertType(item, count.ToString());
                 if (item2 != null)
                     methAdd.Invoke(items2, [item2]);
             }
@@ -122,11 +133,9 @@ public class ExtractRoots
         }
 
     }
+
     public static async Task ExtractRoot<T>(MetadataRoot<T> root0 = null)
-    //static void ExtractRoot<T>(MetadataRoot<T> root0 = null)
     {
-        if (typeof(T) == typeof(Idols))
-            return;
         try
         {
             string name = typeof(T).Name;
@@ -137,7 +146,7 @@ public class ExtractRoots
             var items2 = items.Select(i =>
             {
                 count++;
-                return ConvertType(typeof(T), i, count.ToString());
+                return ConvertType(i, count.ToString());
             }).Where(n => n != null);
 
             Extractor.Logger.LogInfo($"Converted ROOT types. " + items2.Count());
@@ -160,17 +169,20 @@ public class ExtractRoots
             Extractor.Logger.LogError($"Exception extract ROOT (" + root0.ToString() + "): " + ex.Message + " -> " + ex.StackTrace);
         }
     }
-    static object? ConvertType(Type type1, object original, string count = "")
+
+    public static object? ConvertType(object original, string count = "")
     {
         try
         {
+            var type1 = original.GetType();
             if (type1.FullName.EndsWith("Regex"))
                 return ((Il2CppSystem.Text.RegularExpressions.Regex) original).ToString();
 
             Type type2 = GetCorrespondingType(type1);
 
-            if (debug)
-                Extractor.Logger.LogInfo($"ConvertingType: {type2.FullName}. " + count);
+            if (debug && !string.IsNullOrEmpty(count))
+                Extractor.Logger.LogInfo($"ConvertingType: {type1.FullName} to {type2.FullName}. " + count);
+
             if (type1 == type2)
                 return original;
 
@@ -179,12 +191,13 @@ public class ExtractRoots
             {
                 try
                 {
-                    if (ShouldSkipProperty(original, prop))
+                    if (ShouldSkipProperty(inst, original, prop))
                         continue;
-                    var oProp = original.GetType().GetProperty(prop.Name);
+                    var oProp = original.GetType().GetProperty(prop.Name, BindingFlags.Instance | BindingFlags.Public); //, BindingFlags.Instance);
                     if (oProp == null)
                     {
-                        //Extractor.Logger.LogInfo($"Converting property inst (" + inst + "), prop is null.");
+                        if (debug)
+                            Extractor.Logger.LogWarning($"Converting property original (" + original + "), oProp is null (" + prop.Name + ": " + prop.PropertyType.Name + ").");
                         continue;
                     }
                     var val = ConvertProperty(original, oProp);
@@ -205,36 +218,46 @@ public class ExtractRoots
         }
     }
 
-    static bool ShouldSkipProperty(object inst, PropertyInfo prop)
+    public static bool ShouldSkipProperty(object inst, object original, PropertyInfo prop)
     {
         if (inst == null)
         {
-            Extractor.Logger.LogError($"Converting property prop (" + prop + "), inst is null.");
+            Extractor.Logger.LogError($"Converting property prop (" + original + "." + prop.Name + "), inst is null.");
             return true;
         }
         if (rootTypes.Contains(prop.PropertyType))
         {
+            if (debug)
+                Extractor.Logger.LogWarning($"Skip property " + prop.Name + ": " + prop.GetType().FullName);
             return true;
         }
         if (prop.PropertyType.Name == "SpellScripts")
         {
-            //Extractor.Logger.LogError($"Skip weird, SpellScripts should be in rootTypes: " + prop.PropertyType.FullName);
+            if (debug)
+                Extractor.Logger.LogWarning($"Skip weird, SpellScripts should be in rootTypes: " + prop.PropertyType.FullName);
             return true;
         }
         if (prop.PropertyType == typeof(Il2CppSystem.Object))
+        {
+            if (debug)
+                Extractor.Logger.LogWarning($"Skip property: IL2.Object");
             return true;
+        }
 
         // Skip properties that dont have a corresponding field
-        var staticField = inst.GetType().GetField("NativeFieldInfoPtr_" + prop.Name, BindingFlags.Static | BindingFlags.NonPublic);
-        if (staticField == null)
+        Type baseType = original.GetType();
+        bool foundField = false;
+        while (baseType != null)
         {
-            //Extractor.Logger.LogWarning("SKIP DANGEROUS PROPERTY (" + inst + "." + prop.Name + ") that doesnt have a static field");
-            //Extractor.Logger.LogMessage("fields: " + string.Join(", ", inst.GetType().GetFields(BindingFlags.Static | BindingFlags.NonPublic).Select(f => f.Name)));
-            //Extractor.Logger.LogMessage("Special/Collectible: " + prop.IsSpecialName + ", " + prop.IsCollectible);
-            //Extractor.Logger.LogMessage("GetMethod: " + prop.GetMethod + ", " + prop.GetGetMethod() + ", " + prop.GetMethod.Attributes + ", " + prop.GetMethod.IsPublic);
-            //Extractor.Logger.LogMessage("SetMethod: " + prop.SetMethod + ", " + prop.GetSetMethod() + ", " + prop.SetMethod.Attributes + ", " + prop.SetMethod.IsPublic);
-            //Extractor.Logger.LogMessage("Get attributes: " + string.Join(", ", prop.GetMethod.GetCustomAttributes().Select(a => a.ToString())));
-            //Extractor.Logger.LogMessage("Set attributes: " + string.Join(", ", prop.SetMethod.GetCustomAttributes().Select(a => a.ToString())));
+            var staticField = baseType.GetField("NativeFieldInfoPtr_" + prop.Name, BindingFlags.Static | BindingFlags.NonPublic);
+            if (staticField != null)
+                foundField = true;
+            baseType = baseType.BaseType;
+        }
+        if (!foundField)
+        {
+            if (debug)
+                Extractor.Logger.LogWarning($"Skip property: no static field");
             return true;
         }
 
@@ -250,8 +273,10 @@ public class ExtractRoots
         //    //Extractor.Logger.LogInfo("ConvertingType skip prop by Id: " + prop.Name);
         //    return true;
         //}
-        if (prop.PropertyType.Name == "MemoizedValues")
+        if (prop.PropertyType.Name.Contains("MemoizedValues"))
         {
+            if (debug)
+                Extractor.Logger.LogWarning($"Skip property: memoized value");
             return true;
         }
         return false;
@@ -261,9 +286,22 @@ public class ExtractRoots
     {
         try
         {
-            if (debug)
+            if (debug) // || inst.GetType() == typeof(SpellZoneDescr) || inst.GetType() == typeof(Spells))
                 Extractor.Logger.LogInfo($"Converting property  " + inst + "." + prop.Name + ": " + prop.PropertyType.FullName);
 
+            if (prop.PropertyType.IsEnum)
+            {
+                try
+                {
+                    return Convert.ToInt32(prop.GetValue(inst));
+                }
+                catch (Exception ex)
+                {
+                    Extractor.Logger.LogError($"Exception Converting property enum (" + inst + "." + prop.Name + ": " + prop.PropertyType.FullName + "): " + ex.Message + " -> " + ex.StackTrace);
+                    return null;
+                }
+            }
+            else
             if (prop.PropertyType.IsPrimitive)
             {
                 try
@@ -272,7 +310,7 @@ public class ExtractRoots
                 }
                 catch (Exception ex)
                 {
-                    Extractor.Logger.LogError($"Exception Converting property primitive: " + ex.Message + " -> " + ex.StackTrace);
+                    Extractor.Logger.LogError($"Exception Converting property primitive (" + inst + "." + prop.Name + ": " + prop.PropertyType.FullName + "): " + ex.Message + " -> " + ex.StackTrace);
                     return null;
                 }
             }
@@ -285,7 +323,7 @@ public class ExtractRoots
                 }
                 catch (Exception ex)
                 {
-                    Extractor.Logger.LogError($"Exception Converting property string: " + ex.Message + " -> " + ex.StackTrace);
+                    Extractor.Logger.LogError($"Exception Converting property string (" + inst + "." + prop.Name + ": " + prop.PropertyType.FullName + "): " + ex.Message + " -> " + ex.StackTrace);
                     return null;
                 }
             }
@@ -295,7 +333,8 @@ public class ExtractRoots
                 var val = prop.GetValue(inst);
                 if (val == null)
                 {
-                    //Extractor.Logger.LogWarning($"Converting property list value is null");
+                    if(debug)
+                        Extractor.Logger.LogWarning($"Converting property list value is null in " + inst + "." + prop.Name + ": " + prop.PropertyType);
                     return null;
                 }
                 var genericType = GetCorrespondingType(prop.PropertyType);
@@ -306,9 +345,8 @@ public class ExtractRoots
                 }
                 if (prop.PropertyType.GenericTypeArguments.Length == 1)
                 {
-                    //Extractor.Logger.LogInfo("ConvertingProperty list json: " + val.ToString() + " to " + list2);
-
                     IEnumerable list1 = null;
+                    //Extractor.Logger.LogInfo("ConvertingProperty list json1: " + val.GetType() + " vs " + genericType);
                     if (val is IEnumerable)
                     {
                         list1 = val as IEnumerable;
@@ -323,6 +361,7 @@ public class ExtractRoots
                         list1 = val.GetType().GetProperty("_items")?.GetValue(val) as IEnumerable;
                     }
                     var list2 = Activator.CreateInstance(genericType) as ICollection;
+                    //Extractor.Logger.LogInfo("ConvertingProperty list json2: " + val.ToString() + " to " + list2);
                     if (list1 == null)
                     {
                         Extractor.Logger.LogError($"Converting property list error - val: " + val + ", list1: " + list1 + ", list2: " + list2);
@@ -334,7 +373,7 @@ public class ExtractRoots
                     foreach (var item in list1)
                     {
                         if (item is null) continue;
-                        var item2 = ConvertType(item.GetType(), item);
+                        var item2 = ConvertType(item);
                         if (item2 != null && !rootTypes.Contains(item2.GetType()))
                             meth.Invoke(list2, [item2]);
                     }
@@ -361,7 +400,7 @@ public class ExtractRoots
             {
                 var val = prop.GetValue(inst);
                 if (val == null) return null;
-                var val2 = ConvertType(val.GetType(), val);
+                var val2 = ConvertType(val);
                 if (val2 == null) return null;
                 if (val2.GetType().FullName.StartsWith("Core.") || val2.GetType().FullName.StartsWith("Metadata."))
                 {
@@ -377,6 +416,7 @@ public class ExtractRoots
         }
         return null;
     }
+
     static Type GetCorrespondingType(Type type1)
     {
         try

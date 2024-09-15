@@ -6,26 +6,28 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using static MS.Internal.Xml.XPath.QueryBuilder;
 
 namespace DDC.Extractor;
 public class ExtractModelTypes
 {
+    public const BindingFlags bindingFlags = BindingFlags.Instance | BindingFlags.Public;
+    static string path1 = "C:\\Robyn\\Git\\ankama\\BPI\\DDC\\DDC\\Generated\\";
+    static string path2 = Path.Join(Extractor.OutputDirectory, "ddc/cs/");
+
     public static async Task GetAllModels()
     {
-        //System.IO.Directory.Delete("C:\\Robyn\\Git\\ankama\\BPI\\DDC\\DDC\\Generated");
-        //System.IO.Directory.Delete(Path.Join(Extractor.OutputDirectory, "ddc/cs/"));
-        //System.IO.Directory.CreateDirectory(Path.Join(Extractor.OutputDirectory, "ddc/cs/"));
+        //if (Directory.Exists(path1))
+        //    System.IO.Directory.Delete(path1);
+        //if (Directory.Exists(path2))
+        //    System.IO.Directory.Delete(path2);
+        //Directory.CreateDirectory(path1);
+        //Directory.CreateDirectory(path2);
 
         var assemblies = AppDomain.CurrentDomain.GetAssemblies();
         var theAss = typeof(Items).Assembly;
         Extractor.Logger.LogInfo("====== ASSEMBLIES ======");
         await extractAssembly(theAss);
-        //foreach (var ass in assemblies)
-        //{
-        //    if (ass.FullName == null || !ass.FullName.Contains("Ankama.Dofus.Core.DataCenter"))
-        //        continue;
-        //    await extractAssembly(ass);
-        //}
         Extractor.Logger.LogInfo("====== DONE WRITE CSHARP ======");
     }
     static async Task extractAssembly(Assembly ass)
@@ -39,12 +41,13 @@ public class ExtractModelTypes
             if (t.IsGenericType)
                 continue;
             if (!(
+                //t.FullName.ToLower().StartsWith("Core.DataCenter".ToLower()) ||
+                //t.FullName.ToLower().StartsWith("Metadata.".ToLower())
                 t.FullName.ToLower().StartsWith("Core.DataCenter.Metadata".ToLower()) ||
                 t.FullName.ToLower().StartsWith("Core.DataCenter.Types".ToLower()) ||
                 t.FullName.ToLower().StartsWith("Core.DataCenter.Interfaces".ToLower()) ||
                 t.FullName.ToLower().StartsWith("Metadata.Enums.".ToLower()) ||
                 t.FullName.ToLower().StartsWith("Metadata.Appearance.".ToLower())
-
                 ))
                 continue;
             if (t.FullName.EndsWith("Root") || t.Name.StartsWith("__")) // || t.Namespace.EndsWith(".Sound"))
@@ -55,50 +58,52 @@ public class ExtractModelTypes
             //await WriteProto(t);
         }
     }
-    static async Task WriteProto(Type type)
-    {
-        string path = Path.Join(Extractor.OutputDirectory, "ddc/protos/" + type.Name + ".proto");
-        StringBuilder sb = new StringBuilder();
-        sb.AppendLine($"message {type.Name} " + "{");
-        int i = 1;
-        foreach (var prop in type.GetProperties())
-        {
-            sb.Append('\t');
 
-            if (prop.PropertyType.Name.EndsWith("Ptr") || prop.Name == "WasCollected")
-                sb.Append("// ");
+    //static async Task WriteProto(Type type)
+    //{
+    //    string path = Path.Join(Extractor.OutputDirectory, "ddc/protos/" + type.Name + ".proto");
+    //    StringBuilder sb = new StringBuilder();
+    //    sb.AppendLine($"message {type.Name} " + "{");
+    //    int i = 1;
+    //    foreach (var prop in type.GetProperties())
+    //    {
+    //        sb.Append('\t');
 
-            sb.Append("optional ");
+    //        if (prop.PropertyType.Name.EndsWith("Ptr") || prop.Name == "WasCollected")
+    //            sb.Append("// ");
 
-            var propType = prop.PropertyType.Name;
-            if (prop.PropertyType.IsGenericType)
-            {
-                sb.Append("repeated ");
-                propType = prop.PropertyType.GenericTypeArguments[0].Name;
-            }
-            if (prop.PropertyType.IsPrimitive)
-            {
-                propType = propType.ToLower();
-            }
+    //        sb.Append("optional ");
 
-            sb.Append(propType);
-            sb.Append(' ');
-            sb.Append(prop.Name);
+    //        var propType = prop.PropertyType.Name;
+    //        if (prop.PropertyType.IsGenericType)
+    //        {
+    //            sb.Append("repeated ");
+    //            propType = prop.PropertyType.GenericTypeArguments[0].Name;
+    //        }
+    //        if (prop.PropertyType.IsPrimitive)
+    //        {
+    //            propType = propType.ToLower();
+    //        }
 
-            sb.AppendLine(" = " + i + ";");
-            i++;
-        }
-        sb.Append('}');
-        await File.WriteAllTextAsync(path, sb.ToString());
-    }
+    //        sb.Append(propType);
+    //        sb.Append(' ');
+    //        sb.Append(prop.Name);
+
+    //        sb.AppendLine(" = " + i + ";");
+    //        i++;
+    //    }
+    //    sb.Append('}');
+    //    await File.WriteAllTextAsync(path, sb.ToString());
+    //}
+
     static async Task WriteCSharp(Type type)
     {
         var folder = type.Namespace.Replace(".", "/") + "/";
-        System.IO.Directory.CreateDirectory("C:\\Robyn\\Git\\ankama\\BPI\\DDC\\DDC\\Generated\\" + folder);
+        System.IO.Directory.CreateDirectory(path1 + folder);
         //System.IO.Directory.CreateDirectory(Path.Join(Extractor.OutputDirectory, "ddc/cs/" + folder));
 
         //string path = Path.Join(Extractor.OutputDirectory, "ddc/cs/" + folder + type.Name + ".cs");
-        string path2 = $"C:\\Robyn\\Git\\ankama\\BPI\\DDC\\DDC\\Generated\\{folder + type.Name}.cs";
+        string path2 = $"{path1}{folder + type.Name}.cs";
         //Extractor.Logger.LogInfo("folder: " + folder);
 
         var str = "";
@@ -133,19 +138,16 @@ public class ExtractModelTypes
             Extractor.Logger.LogError("Exception WriteCSharp: " + ex.Message + " -> " + ex.StackTrace);
         }
     }
+
     static string typeToEnumString(Type type)
     {
         try
         {
-
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("namespace Generated." + type.Namespace + ";");
             sb.AppendLine($"public enum {type.Name} " + "{");
             var names = type.GetEnumNames();
             var values = type.GetEnumValues();
-            //var names1 = Enum.GetNames(type);
-            //var values1 = Enum.GetValues(type);
-
             for (int i = 0; i < names.Length; i++)
             {
                 sb.Append('\t');
@@ -170,31 +172,26 @@ public class ExtractModelTypes
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("using UnityEngine;");
             sb.AppendLine("namespace Generated." + type.Namespace + ";");
-
             sb.Append($"public struct {type.Name} ");
             sb.Append('{');
             sb.AppendLine();
-
             int i = 1;
-            foreach (var field in type.GetFields())
+            foreach (var field in type.GetFields(bindingFlags))
             {
 
-                if (field.FieldType.Name.EndsWith("Ptr") || field.Name == "WasCollected") // || prop.Name.StartsWith("m_"))
+                if (field.FieldType.Name.EndsWith("Ptr") || field.Name == "WasCollected")
                     continue;
                 if (field.DeclaringType != type)
                     continue;
                 if (field.Name.Contains(".")) //"_002")) // should be fixed by isVirtual
                     continue;
-
+                var fieldType = ConvertTypeName(field.FieldType);
                 sb.Append('\t');
                 sb.Append("public ");
-
-                var fieldType = ConvertTypeName(field.FieldType);
-
                 sb.Append(fieldType);
                 sb.Append(' ');
                 sb.Append(field.Name);
-                sb.Append(';'); //sb.Append(" { get; init; }");
+                sb.Append(';');
                 sb.Append('\n');
                 i++;
             }
@@ -213,20 +210,12 @@ public class ExtractModelTypes
         {
 
             StringBuilder sb = new StringBuilder();
-            //sb.AppendLine("using Core.DataCenter.Interfaces;");
-            //sb.AppendLine("using Core.DataCenter.Metadata;");
-            //sb.AppendLine("using Core.DataCenter.Types;");
-            //sb.AppendLine("using Metadata;");
-            //sb.AppendLine("using Metadata.Enums;");
             sb.AppendLine("using UnityEngine;");
-            //if(type.FullName == "SkinSlotsRules")
-            //{
+
+            //if (type.FullName == "Core.DataCenter.Metadata.Appearance.SkinSlotsRules")
             //    sb.AppendLine("using Metadata.Appearance;");
-            //}
             if (type.FullName == "Core.DataCenter.Metadata.Sound.SoundBones")
                 sb.AppendLine("using static Core.DataCenter.Metadata.Sound.SoundBones;");
-            if (type.FullName == "Core.DataCenter.Metadata.Appearance.SkinSlotsRules")
-                sb.AppendLine("using Metadata.Appearance;");
             if (type.Name == "SoundBonesDictionary")
             {
                 return null;
@@ -244,29 +233,19 @@ public class ExtractModelTypes
             sb.Append('{');
             sb.AppendLine();
             int i = 1;
-            foreach (var prop in type.GetProperties())
+            foreach (var prop in type.GetProperties(bindingFlags)) //BindingFlags.Instance))
             {
-
+                if (shouldSkipProp(type, prop))
+                    continue;
                 if (prop.PropertyType.Name.EndsWith("Ptr") || prop.Name == "WasCollected") // || prop.Name.StartsWith("m_"))
                     continue;
                 if (prop.DeclaringType != type)
                     continue;
-                //if (prop.GetGetMethod()?.IsVirtual ?? false)
-                //{
-                //    if (!prop.Name.Contains("_002"))
-                //    {
-                //        Extractor.Logger.LogWarning("Skipping virtual property: " + type.Name + "." + prop.Name + ": " + prop.PropertyType);
-                //    }
-                //    continue;
-                //}
                 if (prop.Name.Contains(".")) //"_002")) // should be fixed by isVirtual
                     continue;
-
+                var propType = ConvertTypeName(prop.PropertyType);
                 sb.Append('\t');
                 sb.Append("public ");
-
-                var propType = ConvertTypeName(prop.PropertyType);
-
                 sb.Append(propType);
                 sb.Append(' ');
                 sb.Append(prop.Name);
@@ -283,6 +262,25 @@ public class ExtractModelTypes
             return null;
         }
     }
+    static bool shouldSkipProp(Type original, PropertyInfo prop)
+    {
+        // Skip properties that dont have a corresponding field
+        Type baseType = original;
+        bool foundField = false;
+        while (baseType != null)
+        {
+            var staticField = baseType.GetField("NativeFieldInfoPtr_" + prop.Name, BindingFlags.Static | BindingFlags.NonPublic);
+            if (staticField != null)
+                foundField = true;
+            baseType = baseType.BaseType;
+        }
+        if (!foundField)
+        {
+            return true;
+        }
+        return false;
+    }
+
     static string ConvertTypeName(Type type)
     {
         var propType = type.FullName;
@@ -298,7 +296,6 @@ public class ExtractModelTypes
             return typeof(string).FullName;
         propType = propType.Replace("Il2CppSystem.Object", "object");
         propType = propType.Replace("Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppStringArray", typeof(string).FullName + "[]");
-        //propType = propType.Replace("Il2CppSystem.Text.RegularExpressions.Regex", typeof(string).Name); //System.Text.RegularExpressions.Regex");
 
         if (propType.Contains("+"))
         {
@@ -313,10 +310,6 @@ public class ExtractModelTypes
             propType += string.Join(", ", type.GenericTypeArguments.Select(ConvertTypeName));
             propType += ">";
         }
-        //if (prop.PropertyType.IsPrimitive)
-        //{
-        //    propType = propType.ToLower().Replace("boolean", "bool").Replace("32", "");
-        //}
         return propType;
     }
 

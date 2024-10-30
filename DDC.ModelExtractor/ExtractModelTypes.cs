@@ -17,16 +17,15 @@ public class ExtractModelTypes
 
     public static async Task GetAllModels()
     {
-        var assemblies = AppDomain.CurrentDomain.GetAssemblies();
-        var theAss = typeof(LocalizationTable).Assembly;
-        ModelExtractorPlugin.Logger.LogInfo("====== ASSEMBLIES ======");
-        await extractAssembly(theAss);
-        ModelExtractorPlugin.Logger.LogInfo("====== DONE WRITE CSHARP ======");
+        var datacenterAssembly = typeof(Items).Assembly;
+        ModelExtractor.Logger.LogInfo("====== ASSEMBLIES ======");
+        await extractAssembly(datacenterAssembly);
+        ModelExtractor.Logger.LogInfo("====== DONE WRITE CSHARP ======");
     }
     static async Task extractAssembly(Assembly ass)
     {
-        ModelExtractorPlugin.Logger.LogInfo(ass.FullName);
-        ModelExtractorPlugin.Logger.LogInfo("====== TYPES ======");
+        ModelExtractor.Logger.LogInfo(ass.FullName);
+        ModelExtractor.Logger.LogInfo("====== TYPES ======");
         var types = ass.GetTypes();
         //Extractor.Logger.LogInfo(string.Join(", ", types.Where(t => t.FullName.ToLower().StartsWith("Core.DataCenter.Metadata".ToLower())).Select(t => t.FullName)));
         foreach (var t in types)
@@ -45,7 +44,7 @@ public class ExtractModelTypes
                 continue;
             if (t.FullName.EndsWith("Root") || t.Name.StartsWith("__")) // || t.Namespace.EndsWith(".Sound"))
                 continue;
-            //Extractor.Logger.LogInfo(t.FullName);
+            //ModelExtractor.Logger.LogInfo(t.FullName);
 
             await WriteCSharp(t);
             //await WriteProto(t);
@@ -91,11 +90,11 @@ public class ExtractModelTypes
 
     static async Task WriteCSharp(Type type)
     {
-        var folderName = type.Namespace.Replace(".", "/") + "/";
-        var folderPath = ModelExtractorPlugin.OutputDirectory + "/" + folderName;
+        var folderName = type.Namespace.Replace(".", "/");
+        var folderPath = ModelExtractor.OutputDirectory + folderName;
         Directory.CreateDirectory(folderPath);
         string filePath = $"{folderPath}/{type.Name}.cs";
-        //Extractor.Logger.LogInfo("folder: " + folder);
+        ModelExtractor.Logger.LogInfo(filePath);
 
         var str = "";
         try
@@ -126,7 +125,7 @@ public class ExtractModelTypes
         }
         catch (Exception ex)
         {
-            ModelExtractorPlugin.Logger.LogError("Exception WriteCSharp: " + ex.Message + " -> " + ex.StackTrace);
+            ModelExtractor.Logger.LogError("Exception WriteCSharp: " + ex.Message + " -> " + ex.StackTrace);
         }
     }
 
@@ -152,7 +151,7 @@ public class ExtractModelTypes
         }
         catch (Exception ex)
         {
-            ModelExtractorPlugin.Logger.LogError("Exception typeToEnumString (" + type.FullName + "): " + ex.Message + " -> " + ex.StackTrace);
+            ModelExtractor.Logger.LogError("Exception typeToEnumString (" + type.FullName + "): " + ex.Message + " -> " + ex.StackTrace);
             return null;
         }
     }
@@ -191,7 +190,7 @@ public class ExtractModelTypes
         }
         catch (Exception ex)
         {
-            ModelExtractorPlugin.Logger.LogError("Exception typeToStructString (" + type.FullName + "): " + ex.Message + " -> " + ex.StackTrace);
+            ModelExtractor.Logger.LogError("Exception typeToStructString (" + type.FullName + "): " + ex.Message + " -> " + ex.StackTrace);
             return null;
         }
     }
@@ -249,7 +248,7 @@ public class ExtractModelTypes
         }
         catch (Exception ex)
         {
-            ModelExtractorPlugin.Logger.LogError("Exception typeToClassString: " + ex.Message + " -> " + ex.StackTrace);
+            ModelExtractor.Logger.LogError("Exception typeToClassString: " + ex.Message + " -> " + ex.StackTrace);
             return null;
         }
     }

@@ -56,12 +56,12 @@ public class ModelExtractorComponent : MonoBehaviour
     static IEnumerator StartCoroutine()
     {
         yield return Wait(1);
-        ModelExtractorPlugin.Logger.LogInfo("Start extracting type models...");
+        ModelExtractor.Logger.LogInfo("Start extracting type models...");
 
         // extract class types
         yield return WaitForCompletion(ExtractModelTypes.GetAllModels());
 
-        ModelExtractorPlugin.Logger.LogInfo("DDC type model generation complete.");
+        ModelExtractor.Logger.LogInfo("DDC type model generation complete.");
         Application.Quit(0);
     }
 

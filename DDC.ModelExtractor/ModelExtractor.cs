@@ -6,7 +6,7 @@ namespace DDC.ModelExtractor;
 
 
 [BepInPlugin(MyPluginInfo.PLUGIN_GUID, MyPluginInfo.PLUGIN_NAME, MyPluginInfo.PLUGIN_VERSION)]
-public class ModelExtractorPlugin : BasePlugin
+public class ModelExtractor : BasePlugin
 {
     public static ManualLogSource Logger { get; private set; }
     public static string OutputDirectory { get; private set; }
@@ -20,8 +20,8 @@ public class ModelExtractorPlugin : BasePlugin
 
     void InitializeOutputDirectory()
     {
-        //var defaultDir = "C:/Robyn/Git/ankama/BPI/DDC/DDC/Generated/";
-        var defaultDir = "DDC/Generated/";
+        var defaultDir = "C:/Robyn/Git/ankama/BPI/DDC/DDC/Generated/";
+        //var defaultDir = "DDC/Generated/";
         string outdir = Config.Bind("General", "OutputDirectory", defaultDir, "Directory where outputs should be written to.").Value;
         OutputDirectory = Path.GetFullPath(outdir);
 

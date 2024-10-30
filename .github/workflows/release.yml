@@ -107,10 +107,8 @@ jobs:
       - name: Cleanup plugin
         run: rm ${{ steps.read_dofus_version.outputs.dofus_path }}/BepInEx/plugins/DDC.ModelExtractor.dll
 
-      - name: Display types
-        run: |
-          ls "${{ github.workspace }}/DDC/Generated"
-          ls "${{ github.workspace }}/DDC/Generated/Core/DataCenter/Metadata/Spell"
+      - run: ls "${{ github.workspace }}/DDC/Generated"
+      # - run: ls "${{ github.workspace }}/DDC/Generated/Core/DataCenter/Metadata/Spell"
 
       - name: Upload compiled library to artifacts
         if: ${{ github.event_name != 'release' }}

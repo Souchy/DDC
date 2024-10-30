@@ -105,7 +105,7 @@
 	</ItemGroup>
 
 	<Target Name="CopyDlls" AfterTargets="AfterBuild" Condition="'$(Configuration)' == 'Debug'">
-		<Copy SourceFiles="$(OutDir)\DDC.dll;$(OutDir)\DDC.extractor.dll" DestinationFolder="C:\Users\Blank\AppData\Local\Ankama\Dofus-beta\BepInEx\plugins" />
+		<Copy SourceFiles="$(OutDir)\DDC.dll;$(OutDir)\DDC.Extractor.dll" DestinationFolder="C:\Users\Blank\AppData\Local\Ankama\Dofus-beta\BepInEx\plugins" />
 	</Target>
 	<Target Name="PostBuildProcessing" AfterTargets="CopyDlls" Condition="'$(Configuration)' == 'Debug'">
 		<Exec Command="C:\Users\Blank\AppData\Local\Ankama\Dofus-beta\Dofus.exe" />

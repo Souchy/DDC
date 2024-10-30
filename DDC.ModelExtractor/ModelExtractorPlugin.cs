@@ -15,7 +15,7 @@ public class ModelExtractorPlugin : BasePlugin
     {
         Logger = Log;
         InitializeOutputDirectory();
-        //AddComponent<ExtractorBehaviour>();
+        AddComponent<ModelExtractorComponent>();
     }
 
     void InitializeOutputDirectory()

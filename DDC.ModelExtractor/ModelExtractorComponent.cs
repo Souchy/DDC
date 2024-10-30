@@ -13,10 +13,35 @@ using System.Threading.Tasks;
 using System.Windows.Markup;
 using System.Xml.Linq;
 using BepInEx.Unity.IL2CPP.Utils.Collections;
+using Core.DataCenter;
+using Core.DataCenter.Metadata.Alliance;
+using Core.DataCenter.Metadata.Appearance;
+using Core.DataCenter.Metadata.Breed;
+using Core.DataCenter.Metadata.Effect;
+using Core.DataCenter.Metadata.Effect.Instance;
+using Core.DataCenter.Metadata.Idol;
+using Core.DataCenter.Metadata.Item;
+using Core.DataCenter.Metadata.Monster;
+using Core.DataCenter.Metadata.Quest;
+using Core.DataCenter.Metadata.Quest.TreasureHunt;
+using Core.DataCenter.Metadata.Social;
+using Core.DataCenter.Metadata.Spell;
+using Core.DataCenter.Metadata.Stat;
+using Core.DataCenter.Metadata.World;
+using Core.DataCenter.Types;
+using Core.Engine.Messages;
+using Core.Localization;
+using Il2CppSystem.IO;
+using Metadata.Enums;
+using UnityEngine;
+using static ers;
+using File = System.IO.File;
+using FileStream = System.IO.FileStream;
+using Path = System.IO.Path;
 
 namespace DDC.ModelExtractor;
 
-public class ExtractorBehaviour : MonoBehaviour
+public class ModelExtractorComponent : MonoBehaviour
 {
     public static readonly JsonSerializerOptions JsonSerializerOptions = new(JsonSerializerDefaults.Web)
     {
@@ -31,16 +56,12 @@ public class ExtractorBehaviour : MonoBehaviour
     static IEnumerator StartCoroutine()
     {
         yield return Wait(1);
-        // missing targetMask dans effectinstance (enemis,alliés pour zones)
-        // EffectInstance.zoneDescr converting
-        // enum value converting
-        // remove properties that dont have fields from .cs
-        // remove static fields from .cs
-        ModelExtractorPlugin.Logger.LogInfo("Start extracting data...");
+        ModelExtractorPlugin.Logger.LogInfo("Start extracting type models...");
 
+        // extract class types
         yield return WaitForCompletion(ExtractModelTypes.GetAllModels());
-        ModelExtractorPlugin.Logger.LogInfo("DDC model generation complete.");
 
+        ModelExtractorPlugin.Logger.LogInfo("DDC type model generation complete.");
         Application.Quit(0);
     }
 

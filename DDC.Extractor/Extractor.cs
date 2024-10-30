@@ -15,7 +15,7 @@ public class Extractor : BasePlugin
     {
         Logger = Log;
         InitializeOutputDirectory();
-        //AddComponent<ExtractorBehaviour>();
+        AddComponent<ExtractorBehaviour>();
     }
 
     void InitializeOutputDirectory()

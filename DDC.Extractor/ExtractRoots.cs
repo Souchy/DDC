@@ -44,7 +44,6 @@ public class ExtractRoots
                     //if (prop.Name != "itemsRoot") // && prop.Name != "spellsRoot" && prop.Name != nameof(DataCenterModule.spellLevelsRoot))
                     //    return null;
 
-
                     return prop.GetValue(typeof(DataCenterModule));
                 }
                 catch (Exception ex)
@@ -333,7 +332,7 @@ public class ExtractRoots
                 var val = prop.GetValue(inst);
                 if (val == null)
                 {
-                    if(debug)
+                    if (debug)
                         Extractor.Logger.LogWarning($"Converting property list value is null in " + inst + "." + prop.Name + ": " + prop.PropertyType);
                     return null;
                 }

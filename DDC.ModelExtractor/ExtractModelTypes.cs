@@ -1,4 +1,5 @@
 ﻿using Core.DataCenter.Metadata.Item;
+using DDC.Models.I18N;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -8,12 +9,13 @@ using System.Text;
 using System.Threading.Tasks;
 using static MS.Internal.Xml.XPath.QueryBuilder;
 
-namespace DDC.Extractor;
+namespace DDC.ModelExtractor;
+
 public class ExtractModelTypes
 {
     public const BindingFlags bindingFlags = BindingFlags.Instance | BindingFlags.Public;
     static string path1 = "C:\\Robyn\\Git\\ankama\\BPI\\DDC\\DDC\\Generated\\";
-    static string path2 = Path.Join(Extractor.OutputDirectory, "ddc/cs/");
+    static string path2 = Path.Join(ModelExtractorPlugin.OutputDirectory, "ddc/cs/");
 
     public static async Task GetAllModels()
     {
@@ -25,15 +27,15 @@ public class ExtractModelTypes
         //Directory.CreateDirectory(path2);
 
         var assemblies = AppDomain.CurrentDomain.GetAssemblies();
-        var theAss = typeof(Items).Assembly;
-        Extractor.Logger.LogInfo("====== ASSEMBLIES ======");
+        var theAss = typeof(LocalizationTable).Assembly;
+        ModelExtractorPlugin.Logger.LogInfo("====== ASSEMBLIES ======");
         await extractAssembly(theAss);
-        Extractor.Logger.LogInfo("====== DONE WRITE CSHARP ======");
+        ModelExtractorPlugin.Logger.LogInfo("====== DONE WRITE CSHARP ======");
     }
     static async Task extractAssembly(Assembly ass)
     {
-        Extractor.Logger.LogInfo(ass.FullName);
-        Extractor.Logger.LogInfo("====== TYPES ======");
+        ModelExtractorPlugin.Logger.LogInfo(ass.FullName);
+        ModelExtractorPlugin.Logger.LogInfo("====== TYPES ======");
         var types = ass.GetTypes();
         //Extractor.Logger.LogInfo(string.Join(", ", types.Where(t => t.FullName.ToLower().StartsWith("Core.DataCenter.Metadata".ToLower())).Select(t => t.FullName)));
         foreach (var t in types)
@@ -135,7 +137,7 @@ public class ExtractModelTypes
         }
         catch (Exception ex)
         {
-            Extractor.Logger.LogError("Exception WriteCSharp: " + ex.Message + " -> " + ex.StackTrace);
+            ModelExtractorPlugin.Logger.LogError("Exception WriteCSharp: " + ex.Message + " -> " + ex.StackTrace);
         }
     }
 
@@ -161,7 +163,7 @@ public class ExtractModelTypes
         }
         catch (Exception ex)
         {
-            Extractor.Logger.LogError("Exception typeToEnumString (" + type.FullName + "): " + ex.Message + " -> " + ex.StackTrace);
+            ModelExtractorPlugin.Logger.LogError("Exception typeToEnumString (" + type.FullName + "): " + ex.Message + " -> " + ex.StackTrace);
             return null;
         }
     }
@@ -200,7 +202,7 @@ public class ExtractModelTypes
         }
         catch (Exception ex)
         {
-            Extractor.Logger.LogError("Exception typeToStructString (" + type.FullName + "): " + ex.Message + " -> " + ex.StackTrace);
+            ModelExtractorPlugin.Logger.LogError("Exception typeToStructString (" + type.FullName + "): " + ex.Message + " -> " + ex.StackTrace);
             return null;
         }
     }
@@ -258,7 +260,7 @@ public class ExtractModelTypes
         }
         catch (Exception ex)
         {
-            Extractor.Logger.LogError("Exception typeToClassString: " + ex.Message + " -> " + ex.StackTrace);
+            ModelExtractorPlugin.Logger.LogError("Exception typeToClassString: " + ex.Message + " -> " + ex.StackTrace);
             return null;
         }
     }

@@ -14,18 +14,9 @@ namespace DDC.ModelExtractor;
 public class ExtractModelTypes
 {
     public const BindingFlags bindingFlags = BindingFlags.Instance | BindingFlags.Public;
-    static string path1 = "C:\\Robyn\\Git\\ankama\\BPI\\DDC\\DDC\\Generated\\";
-    static string path2 = Path.Join(ModelExtractorPlugin.OutputDirectory, "ddc/cs/");
 
     public static async Task GetAllModels()
     {
-        //if (Directory.Exists(path1))
-        //    System.IO.Directory.Delete(path1);
-        //if (Directory.Exists(path2))
-        //    System.IO.Directory.Delete(path2);
-        //Directory.CreateDirectory(path1);
-        //Directory.CreateDirectory(path2);
-
         var assemblies = AppDomain.CurrentDomain.GetAssemblies();
         var theAss = typeof(LocalizationTable).Assembly;
         ModelExtractorPlugin.Logger.LogInfo("====== ASSEMBLIES ======");
@@ -100,12 +91,10 @@ public class ExtractModelTypes
 
     static async Task WriteCSharp(Type type)
     {
-        var folder = type.Namespace.Replace(".", "/") + "/";
-        System.IO.Directory.CreateDirectory(path1 + folder);
-        //System.IO.Directory.CreateDirectory(Path.Join(Extractor.OutputDirectory, "ddc/cs/" + folder));
-
-        //string path = Path.Join(Extractor.OutputDirectory, "ddc/cs/" + folder + type.Name + ".cs");
-        string path2 = $"{path1}{folder + type.Name}.cs";
+        var folderName = type.Namespace.Replace(".", "/") + "/";
+        var folderPath = ModelExtractorPlugin.OutputDirectory + "/" + folderName;
+        Directory.CreateDirectory(folderPath);
+        string filePath = $"{folderPath}/{type.Name}.cs";
         //Extractor.Logger.LogInfo("folder: " + folder);
 
         var str = "";
@@ -132,7 +121,7 @@ public class ExtractModelTypes
             if (!string.IsNullOrWhiteSpace(str))
             {
                 //await File.WriteAllTextAsync(path, str);
-                await File.WriteAllTextAsync(path2, str);
+                await File.WriteAllTextAsync(filePath, str);
             }
         }
         catch (Exception ex)

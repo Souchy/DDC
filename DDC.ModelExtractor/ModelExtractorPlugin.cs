@@ -20,7 +20,9 @@ public class ModelExtractorPlugin : BasePlugin
 
     void InitializeOutputDirectory()
     {
-        string outdir = Config.Bind("General", "OutputDirectory", "./", "Directory where outputs should be written to.").Value;
+        //var defaultDir = "C:/Robyn/Git/ankama/BPI/DDC/DDC/Generated/";
+        var defaultDir = "DDC/Generated/";
+        string outdir = Config.Bind("General", "OutputDirectory", defaultDir, "Directory where outputs should be written to.").Value;
         OutputDirectory = Path.GetFullPath(outdir);
 
         if (!Directory.Exists(OutputDirectory))

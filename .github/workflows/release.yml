@@ -79,11 +79,11 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore
 
-  extract-types:
-    name: Extract game data types
-    runs-on: windows-latest
-    needs: setup
-    steps:
+  # extract-types:
+  #   name: Extract game data types
+  #   runs-on: windows-latest
+  #   needs: setup
+  #   steps:
       - name: Build DDC.ModelExtractor plugin
         run: dotnet build DDC.ModelExtractor/DDC.ModelExtractor.csproj --configuration Release --no-restore
 
@@ -101,15 +101,18 @@ jobs:
           '@
           echo "$Configuration" > ${{ steps.read_dofus_version.outputs.dofus_path }}/BepInEx/config/DDC.ModelExtractor.cfg
 
-      - name: Run game once
+      - name: Run game to extract types
         run: node scripts/bepinex-run-until "${{ steps.read_dofus_version.outputs.dofus_path }}\Dofus.exe" "Extract types complete"
         timeout-minutes: 10
-
-  extract-data:
-    name: Extract game data
-    runs-on: windows-latest
-    needs: extract-types
-    steps:
+        
+      - name: Cleanup plugin
+        run: rm ${{ steps.read_dofus_version.outputs.dofus_path }}/BepInEx/plugins/DDC.ModelExtractor.dll
+        
+  # extract-data:
+  #   name: Extract game data
+  #   runs-on: windows-latest
+  #   needs: extract-types
+  #   steps:
       - name: Build DDC.Extractor plugin
         run: dotnet build DDC.Extractor/DDC.Extractor.csproj --configuration Release --no-restore
 

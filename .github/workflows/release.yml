@@ -110,7 +110,7 @@ jobs:
       - run: ls "${{ github.workspace }}/DDC/Generated"
       # - run: ls "${{ github.workspace }}/DDC/Generated/Core/DataCenter/Metadata/Spell"
 
-      - name: Upload compiled library to artifacts
+      - name: Upload extracted types to artifacts
         if: ${{ github.event_name != 'release' }}
         uses: actions/upload-artifact@v4
         with:
@@ -141,7 +141,9 @@ jobs:
           echo "$Configuration" > ${{ steps.read_dofus_version.outputs.dofus_path }}/BepInEx/config/DDC.Extractor.cfg
 
       - name: Extract data
-        run: cd ${{ steps.read_dofus_version.outputs.dofus_path }}; node ../scripts/bepinex-run-until "Dofus.exe" "DDC data extraction complete."
+        # run: cd ${{ steps.read_dofus_version.outputs.dofus_path }}; node ../scripts/bepinex-run-until "Dofus.exe" "DDC data extraction complete."
+        run: node scripts/bepinex-run-until "${{ steps.read_dofus_version.outputs.dofus_path }}\Dofus.exe" "DDC data extraction complete."
+        timeout-minutes: 30
 
       - name: Create metadata file
         run: |

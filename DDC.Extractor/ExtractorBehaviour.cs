@@ -100,14 +100,16 @@ public class ExtractorBehaviour : MonoBehaviour
         ExtractRoots.rootTypes.Add(typeof(IdolsPresetIcons));
         ExtractRoots.rootTypes.Add(typeof(SocialTagsTypes));
         ExtractRoots.rootTypes.Add(typeof(SkinPositions));
-        var roots = ExtractRoots.FindRoots();
-        yield return WaitForCompletion(ExtractRoots.GetAllRoots(roots));
 
-        yield return WaitForCompletion(ExtractLocale("ddc/json/i18n/de.i18n.json", "Dofus_Data/StreamingAssets/Content/I18n/de.bin"));
-        yield return WaitForCompletion(ExtractLocale("ddc/json/i18n/en.i18n.json", "Dofus_Data/StreamingAssets/Content/I18n/en.bin"));
-        yield return WaitForCompletion(ExtractLocale("ddc/json/i18n/es.i18n.json", "Dofus_Data/StreamingAssets/Content/I18n/es.bin"));
-        yield return WaitForCompletion(ExtractLocale("ddc/json/i18n/fr.i18n.json", "Dofus_Data/StreamingAssets/Content/I18n/fr.bin"));
-        yield return WaitForCompletion(ExtractLocale("ddc/json/i18n/pt.i18n.json", "Dofus_Data/StreamingAssets/Content/I18n/pt.bin"));
+        //var roots = ExtractRoots.FindRoots();
+        //yield return WaitForCompletion(ExtractRoots.GetAllRoots(roots));
+        yield return WaitForCompletion(ExtractRoots.asdf());
+
+        yield return WaitForCompletion(ExtractLocale("i18n/de.i18n.json", "Dofus_Data/StreamingAssets/Content/I18n/de.bin"));
+        yield return WaitForCompletion(ExtractLocale("i18n/en.i18n.json", "Dofus_Data/StreamingAssets/Content/I18n/en.bin"));
+        yield return WaitForCompletion(ExtractLocale("i18n/es.i18n.json", "Dofus_Data/StreamingAssets/Content/I18n/es.bin"));
+        yield return WaitForCompletion(ExtractLocale("i18n/fr.i18n.json", "Dofus_Data/StreamingAssets/Content/I18n/fr.bin"));
+        yield return WaitForCompletion(ExtractLocale("i18n/pt.i18n.json", "Dofus_Data/StreamingAssets/Content/I18n/pt.bin"));
         Extractor.Logger.LogInfo("DDC data extraction complete.");
 
         Application.Quit(0);

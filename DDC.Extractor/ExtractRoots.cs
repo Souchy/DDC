@@ -4,6 +4,7 @@ using Core.DataCenter.Metadata.Appearance;
 using Core.DataCenter.Metadata.Breed;
 using Core.DataCenter.Metadata.Challenge;
 using Core.DataCenter.Metadata.Effect;
+using Core.DataCenter.Metadata.House;
 using Core.DataCenter.Metadata.Idol;
 using Core.DataCenter.Metadata.Item;
 using Core.DataCenter.Metadata.Job;
@@ -28,7 +29,10 @@ using System.Xml.Linq;
 namespace DDC.Extractor;
 public class ExtractRoots
 {
-    public static List<Type> dangerousTypes = [typeof(Idols), typeof(IdolsPresetIcons), typeof(SocialTagsTypes), typeof(SkinPositions)];
+    public static List<Type> dangerousTypes = [
+        typeof(Idols), typeof(IdolsPresetIcons), typeof(SocialTagsTypes), typeof(SkinPositions),
+        //typeof(Houses), typeof(HintCategory), typeof(Hints)
+    ];
     //public static List<string> dangerousProperties = ["name", "undiacriticalName", "unDiacriticalName", "entityName", "durationString", "description", "theoreticalDescription", "descriptionForTooltip", "theoreticalDescriptionForTooltip", "theoreticalShortDescriptionForTooltip"];
     public static List<Type> rootTypes = []; //[typeof(Monsters), typeof(Items), typeof(Spells), typeof(SpellLevels), typeof(ItemTypes), typeof(ItemSuperTypes), typeof(Effects)];
     public const int FAST_TAKES = 5;
@@ -82,7 +86,7 @@ public class ExtractRoots
         {
             Extractor.Logger.LogInfo($"Extracting ROOTs (" + roots.Count() + ") =================");
 
-            string path = Path.Join(Extractor.OutputDirectory, "ddc/json/");
+            string path = Path.Join(Extractor.OutputDirectory);
             if (Directory.Exists(path))
                 Directory.Delete(path, true);
 
@@ -98,6 +102,83 @@ public class ExtractRoots
         }
     }
 
+
+    public static async Task asdf()
+    {
+        // Roots are properties of DataCenterModule
+        var roots = typeof(DataCenterModule).GetProperties().Where(p => p.Name.EndsWith("Root")) // && !p.Name.StartsWith("s_"));
+        .Select(prop =>
+        {
+            try
+            {
+                //if (prop.Name != "itemsRoot") // && prop.Name != "spellsRoot" && prop.Name != nameof(DataCenterModule.spellLevelsRoot))
+                //    return null;
+                if(dangerousTypes.Select(t => t.Name.ToLower() + "root").Contains(prop.Name.ToLower()))
+                {
+                    Extractor.Logger.LogMessage($"Ignoring property: " + prop.Name);
+                    return null;
+                }
+                return prop.GetValue(typeof(DataCenterModule));
+            }
+            catch (Exception ex)
+            {
+                Extractor.Logger.LogWarning("Exception asdf (" + prop.Name + "): " + ex.Message); // + " -> " + ex.StackTrace);
+                return null;
+            }
+        })
+        .Where(r => r != null);
+
+        try
+        {
+            Extractor.Logger.LogInfo($"Extracting ROOTs (" + roots.Count() + ") =================");
+            Extractor.Logger.LogInfo(string.Join(", ", roots.Select(p => p.GetType().Name)));
+            string path = Path.Join(Extractor.OutputDirectory);
+            if (Directory.Exists(path))
+                Directory.Delete(path, true);
+            await Task.Delay(5000);
+            foreach (var v in roots)
+            {
+                //await Task.Delay(1000);
+                try
+                {
+                    //Extractor.Logger.LogInfo($"Datacenter prop: " + prop.Name);
+                    Extractor.Logger.LogInfo($"Datacenter prop: " + v.GetType().Name);
+                    //var v = prop.GetValue(typeof(DataCenterModule));
+                    //if (v == null) continue;
+                    var rootType = v.GetType();
+                    var rootTypeBase = rootType.BaseType;
+                    var meth0 = rootTypeBase.GetMethod("GetObjects");
+                    var objects = meth0.Invoke(v, []);
+                    //Extractor.Logger.LogInfo($"Transforming root objects: " + objects + ": " + objects?.GetType().FullName);
+                    var items = objects.GetType().GetProperty("_items").GetValue(objects) as IEnumerable;
+                    var size = objects.GetType().GetProperty("_size").GetValue(objects);
+                    //Extractor.Logger.LogInfo($"Transforming root items (" + size + "): " + items + ": " + items?.GetType().FullName);
+                    var itemType = items.GetType().GenericTypeArguments[0];
+                    if (dangerousTypes.Contains(itemType))
+                        return;
+                    //Extractor.Logger.LogInfo($"Transforming root list type:  {itemType.Name}"); // + items.Count);
+                    var genericType = GetCorrespondingType(items.GetType());
+                    //Extractor.Logger.LogInfo($"Transforming root new list type: " + genericType.FullName);
+                    var items2 = Activator.CreateInstance(genericType) as ICollection;
+                    var methAdd = genericType.GetMethod("Add");
+                    rootTypes.Add(itemType);
+                    //return (items, items2, itemType, methAdd);
+                    await ExtractRoot2(items, items2, itemType, methAdd);
+                }
+                catch (Exception ex)
+                {
+                    Extractor.Logger.LogWarning("Exception asdf prop (" + v.GetType().Name + "): " + ex.Message); // + " -> " + ex.StackTrace);
+                    continue;
+                }
+            }
+            Extractor.Logger.LogInfo($"Extracting ROOTs DONE =================");
+        }
+        catch (Exception ex)
+        {
+            Extractor.Logger.LogInfo("Exception asdf overall: " + ex.Message + " -> " + ex.StackTrace);
+        }
+    }
+
     public static async Task ExtractRoot2(IEnumerable items, ICollection items2, Type itemType, MethodInfo methAdd) //object root0 = null)
     {
         if (dangerousTypes.Contains(itemType))
@@ -105,7 +186,7 @@ public class ExtractRoots
         try
         {
             var folder = itemType.Namespace.Replace(".", "/") + "/";
-            string path = Path.Join(Extractor.OutputDirectory, "ddc/json/" + folder);
+            string path = Path.Join(Extractor.OutputDirectory, folder);
             Extractor.Logger.LogInfo($"Extracting ROOT of type {itemType.Name} to {path}.");
 
             //var methAdd = items2.GetType().GetMethod("Add");
@@ -151,7 +232,7 @@ public class ExtractRoots
             Extractor.Logger.LogInfo($"Converted ROOT types. " + items2.Count());
 
             var folder = typeof(T).Namespace.Replace(".", "/") + "/";
-            string path = Path.Join(Extractor.OutputDirectory, "ddc/json/" + folder);
+            string path = Path.Join(Extractor.OutputDirectory, folder);
             System.IO.Directory.CreateDirectory(path);
             Extractor.Logger.LogInfo($"Created Directory. " + path);
             await using FileStream stream = File.OpenWrite(path + "/" + name + ".json");

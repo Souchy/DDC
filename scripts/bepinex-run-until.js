@@ -39,15 +39,27 @@ proc.on('close', function (code, signal) {
 console.log("Waiting for BepInEx to generate interop assemblies...")
 
 const logFilePath = path.join(dirName, 'BepInEx', 'LogOutput.log');
+const errorFilePath = path.join(dirName, 'BepInEx', 'ErrorOutput.log');
 setInterval(function () {
     if (!fs.existsSync(logFilePath)) {
         return;
     }
-    
-    const logFile = fs.readFileSync(logFilePath, {encoding: 'utf8', flag: 'r'});
-    
+
+    const logFile = fs.readFileSync(logFilePath, { encoding: 'utf8', flag: 'r' });
+
     if (logFile.includes(expectedLog)) {
-        console.log("Found expected log, will exit now.")    
+        console.log("Found expected log, will exit now.")
         process.exit(0);
     }
 }, 1000);
+
+setInterval(function () {
+    if (fs.existsSync(logFilePath)) {
+        const logFile = fs.readFileSync(logFilePath, { encoding: 'utf8', flag: 'r' });
+        console.log(logFile);
+    }
+    if (fs.existsSync(errorFilePath)) {
+        const errorFile = fs.readFileSync(errorFilePath, { encoding: 'utf8', flag: 'r' });
+        console.error(errorFile);
+    }
+}, 1000 * 60 * 10);

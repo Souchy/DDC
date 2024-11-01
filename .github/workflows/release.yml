@@ -79,36 +79,39 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore
 
+      - name: Run CLI
+        run: dotnet run DDC.CLI/DDC.CLI.csproj --configuration Release --no-restore ${{ steps.read_dofus_version.outputs.dofus_path }} . ${{ github.workspace }} false
+
   # extract-types:
   #   name: Extract game data types
   #   runs-on: windows-latest
   #   needs: setup
   #   steps:
-      - name: Build DDC.ModelExtractor plugin
-        run: dotnet build DDC.ModelExtractor/DDC.ModelExtractor.csproj --configuration Release --no-restore
+  #     - name: Build DDC.ModelExtractor plugin
+  #       run: dotnet build DDC.ModelExtractor/DDC.ModelExtractor.csproj --configuration Release --no-restore
 
-      - name: Copy plugin
-        run: copy DDC.ModelExtractor/bin/Release/net6.0/DDC*.dll ${{ steps.read_dofus_version.outputs.dofus_path }}/BepInEx/plugins
+  #     - name: Copy plugin
+  #       run: copy DDC.ModelExtractor/bin/Release/net6.0/DDC*.dll ${{ steps.read_dofus_version.outputs.dofus_path }}/BepInEx/plugins
 
-      - name: Create BepInEx config folder
-        run: md ${{ steps.read_dofus_version.outputs.dofus_path }}/BepInEx/config -Force
+  #     - name: Create BepInEx config folder
+  #       run: md ${{ steps.read_dofus_version.outputs.dofus_path }}/BepInEx/config -Force
 
-      - name: Write DDC.ModelExtractor configuration
-        run: |
-          $Configuration = @'
-          [General]
-          OutputDirectory = ${{ github.workspace }}/DDC/Generated/
-          '@
-          echo "$Configuration" > ${{ steps.read_dofus_version.outputs.dofus_path }}/BepInEx/config/DDC.ModelExtractor.cfg
+  #     - name: Write DDC.ModelExtractor configuration
+  #       run: |
+  #         $Configuration = @'
+  #         [General]
+  #         OutputDirectory = ${{ github.workspace }}/DDC/Generated/
+  #         '@
+  #         echo "$Configuration" > ${{ steps.read_dofus_version.outputs.dofus_path }}/BepInEx/config/DDC.ModelExtractor.cfg
 
-      - name: Run game to extract types
-        run: node scripts/bepinex-run-until "${{ steps.read_dofus_version.outputs.dofus_path }}\Dofus.exe" "DDC type model generation complete."
+  #     - name: Run game to extract types
+  #       run: node scripts/bepinex-run-until "${{ steps.read_dofus_version.outputs.dofus_path }}\Dofus.exe" "DDC type model generation complete."
         
-      - name: Cleanup plugin
-        run: rm ${{ steps.read_dofus_version.outputs.dofus_path }}/BepInEx/plugins/DDC.ModelExtractor.dll
+  #     - name: Cleanup plugin
+  #       run: rm ${{ steps.read_dofus_version.outputs.dofus_path }}/BepInEx/plugins/DDC.ModelExtractor.dll
 
-      - run: ls "${{ github.workspace }}/DDC/Generated"
-      # - run: ls "${{ github.workspace }}/DDC/Generated/Core/DataCenter/Metadata/Spell"
+  #     - run: ls "${{ github.workspace }}/DDC/Generated"
+  #     # - run: ls "${{ github.workspace }}/DDC/Generated/Core/DataCenter/Metadata/Spell"
 
       - name: Upload extracted types to artifacts
         if: ${{ github.event_name != 'release' }}
@@ -118,32 +121,32 @@ jobs:
           path: ${{ github.workspace }}/DDC/Generated
           if-no-files-found: 'error'
         
-  # extract-data:
-  #   name: Extract game data
-  #   runs-on: windows-latest
-  #   needs: extract-types
-  #   steps:
-      - name: Build DDC.Extractor plugin
-        run: dotnet build DDC.Extractor/DDC.Extractor.csproj --configuration Release --no-restore
+  # # extract-data:
+  # #   name: Extract game data
+  # #   runs-on: windows-latest
+  # #   needs: extract-types
+  # #   steps:
+  #     - name: Build DDC.Extractor plugin
+  #       run: dotnet build DDC.Extractor/DDC.Extractor.csproj --configuration Release --no-restore
 
-      - name: Copy plugin
-        run: copy DDC.Extractor/bin/Release/net6.0/DDC*.dll ${{ steps.read_dofus_version.outputs.dofus_path }}/BepInEx/plugins
+  #     - name: Copy plugin
+  #       run: copy DDC.Extractor/bin/Release/net6.0/DDC*.dll ${{ steps.read_dofus_version.outputs.dofus_path }}/BepInEx/plugins
 
-      - name: Create BepInEx config folder
-        run: md ${{ steps.read_dofus_version.outputs.dofus_path }}/BepInEx/config -Force
+  #     - name: Create BepInEx config folder
+  #       run: md ${{ steps.read_dofus_version.outputs.dofus_path }}/BepInEx/config -Force
 
-      - name: Write DDC.Extractor configuration
-        run: |
-          $Configuration = @'
-          [General]
-          OutputDirectory = ./extracted-data
-          '@
-          echo "$Configuration" > ${{ steps.read_dofus_version.outputs.dofus_path }}/BepInEx/config/DDC.Extractor.cfg
+  #     - name: Write DDC.Extractor configuration
+  #       run: |
+  #         $Configuration = @'
+  #         [General]
+  #         OutputDirectory = ./extracted-data
+  #         '@
+  #         echo "$Configuration" > ${{ steps.read_dofus_version.outputs.dofus_path }}/BepInEx/config/DDC.Extractor.cfg
 
-      - name: Extract data
-        # run: cd ${{ steps.read_dofus_version.outputs.dofus_path }}; node ../scripts/bepinex-run-until "Dofus.exe" "DDC data extraction complete."
-        run: node scripts/bepinex-run-until "${{ steps.read_dofus_version.outputs.dofus_path }}\Dofus.exe" "DDC data extraction complete."
-        timeout-minutes: 30
+  #     - name: Extract data
+  #       # run: cd ${{ steps.read_dofus_version.outputs.dofus_path }}; node ../scripts/bepinex-run-until "Dofus.exe" "DDC data extraction complete."
+  #       run: node scripts/bepinex-run-until "${{ steps.read_dofus_version.outputs.dofus_path }}\Dofus.exe" "DDC data extraction complete."
+  #       timeout-minutes: 30
 
       - name: Create metadata file
         run: |

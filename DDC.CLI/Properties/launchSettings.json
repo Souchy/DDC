@@ -2,7 +2,7 @@
   "profiles": {
     "DDC.CLI": {
       "commandName": "Project",
-      "commandLineArgs": "C:\\Users\\robyn\\AppData\\Local\\Ankama\\Dofus-beta C:\\Users\\robyn\\Downloads\\BepInEx-Unity.IL2CPP-win-x64-6.0.0-be.697+5362580 C:\\Robyn\\Git\\ankama\\DDC"
+      "commandLineArgs": "C:\\Users\\robyn\\AppData\\Local\\Ankama\\Dofus-beta C:\\Users\\robyn\\Downloads\\BepInEx-Unity.IL2CPP-win-x64-6.0.0-be.697+5362580 C:\\Robyn\\Git\\ankama\\DDC true"
     }
   }
 }

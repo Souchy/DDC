@@ -14,11 +14,13 @@ internal class Program
         dofusFolder = new DirectoryInfo(args[0]);
         bepinFolder = new DirectoryInfo(args[1]);
         ddcFolder = new DirectoryInfo(args[2]);
-
-        SetupBepIn();
-        CreateBepInConfigFolder();
-        RunGame("Chainloader startup complete");
-        SetupInterop();
+        if(args.Length == 4 && args[3] == "true")
+        {
+            SetupBepIn();
+            CreateBepInConfigFolder();
+            RunGame("Chainloader startup complete");
+            SetupInterop();
+        }
 
         CleanPlugins();
         BuildModelExtractor();

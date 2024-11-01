@@ -171,6 +171,7 @@ public static class Extensions
         }
         catch (UnauthorizedAccessException e)
         {
+            Thread.Sleep(100);
             file.DeleteSafe();
         }
     }

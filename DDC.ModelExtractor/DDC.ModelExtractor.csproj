@@ -101,10 +101,6 @@
 		</Reference>
 	</ItemGroup>
 
-	<ItemGroup>
-		<ProjectReference Include="..\DDC\DDC.csproj" />
-	</ItemGroup>
-
 	<!--
 	<Target Name="RemovePlugins" AfterTargets="AfterBuild" Condition="'$(Configuration)' == 'Debug'">
 		<Exec Command="rm C:\Users\Blank\AppData\Local\Ankama\Dofus-beta\BepInEx\plugins\DDC.Extractor.dll" />

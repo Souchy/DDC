@@ -1,13 +1,6 @@
 ﻿using Core.DataCenter.Metadata.Item;
-using DDC.Models.I18N;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Reflection;
 using System.Text;
-using System.Threading.Tasks;
-using static MS.Internal.Xml.XPath.QueryBuilder;
 
 namespace DDC.ModelExtractor;
 
@@ -91,7 +84,7 @@ public class ExtractModelTypes
     static async Task WriteCSharp(Type type)
     {
         var folderName = type.Namespace.Replace(".", "/");
-        var folderPath = ModelExtractor.OutputDirectory + folderName;
+        var folderPath = Path.Combine(ModelExtractor.OutputDirectory, folderName);
         Directory.CreateDirectory(folderPath);
         string filePath = $"{folderPath}/{type.Name}.cs";
         ModelExtractor.Logger.LogInfo(filePath);

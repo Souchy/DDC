@@ -61,7 +61,7 @@ public class ModelExtractorComponent : MonoBehaviour
         // extract class types
         yield return WaitForCompletion(ExtractModelTypes.GetAllModels());
 
-        ModelExtractor.Logger.LogInfo("DDC type model generation complete.");
+        ModelExtractor.Logger.LogInfo("DDC_type model generation complete.");
         Application.Quit(0);
     }
 

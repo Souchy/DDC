@@ -110,7 +110,8 @@ public class ExtractorBehaviour : MonoBehaviour
         yield return WaitForCompletion(ExtractLocale("i18n/es.i18n.json", "Dofus_Data/StreamingAssets/Content/I18n/es.bin"));
         yield return WaitForCompletion(ExtractLocale("i18n/fr.i18n.json", "Dofus_Data/StreamingAssets/Content/I18n/fr.bin"));
         yield return WaitForCompletion(ExtractLocale("i18n/pt.i18n.json", "Dofus_Data/StreamingAssets/Content/I18n/pt.bin"));
-        Extractor.Logger.LogInfo("DDC data extraction complete.");
+
+        Extractor.Logger.LogInfo("DDC_data extraction complete.");
 
         Application.Quit(0);
     }

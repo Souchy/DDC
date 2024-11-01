@@ -85,7 +85,7 @@ public class ExtractRoots
         try
         {
             Extractor.Logger.LogInfo($"Extracting ROOTs (" + roots.Count() + ") =================");
-
+            
             string path = Path.Join(Extractor.OutputDirectory);
             if (Directory.Exists(path))
                 Directory.Delete(path, true);

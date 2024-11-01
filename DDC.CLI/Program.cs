@@ -165,14 +165,18 @@ public static class Extensions
 {
     public static void DeleteSafe(this FileInfo file)
     {
-        try
+        while(true)
         {
-            file.Delete();
-        }
-        catch (UnauthorizedAccessException e)
-        {
-            Thread.Sleep(100);
-            file.DeleteSafe();
+            try
+            {
+                file.Delete();
+                return;
+            }
+            catch (UnauthorizedAccessException e)
+            {
+                Thread.Sleep(100);
+                //file.DeleteSafe();
+            }
         }
     }
 

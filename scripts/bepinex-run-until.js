@@ -55,11 +55,15 @@ setInterval(function () {
 
 setInterval(function () {
     if (fs.existsSync(logFilePath)) {
+        console.log("================ LOGS ================");
         const logFile = fs.readFileSync(logFilePath, { encoding: 'utf8', flag: 'r' });
         console.log(logFile);
+        console.log("================  ================");
     }
     if (fs.existsSync(errorFilePath)) {
+        console.log("================ ERRORS ================");
         const errorFile = fs.readFileSync(errorFilePath, { encoding: 'utf8', flag: 'r' });
         console.error(errorFile);
+        console.log("================  ================");
     }
 }, 1000 * 60 * 10);

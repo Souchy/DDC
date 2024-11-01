@@ -142,7 +142,7 @@ public class ExtractRoots
                 try
                 {
                     //Extractor.Logger.LogInfo($"Datacenter prop: " + prop.Name);
-                    Extractor.Logger.LogInfo($"Datacenter prop: " + v.GetType().Name);
+                    //Extractor.Logger.LogInfo($"Datacenter prop: " + v.GetType().Name);
                     //var v = prop.GetValue(typeof(DataCenterModule));
                     //if (v == null) continue;
                     var rootType = v.GetType();

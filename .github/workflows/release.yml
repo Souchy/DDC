@@ -80,7 +80,7 @@ jobs:
         run: dotnet restore
 
       - name: Run CLI
-        run: dotnet run DDC.CLI/DDC.CLI.csproj --configuration Release --no-restore ${{ steps.read_dofus_version.outputs.dofus_path }} . ${{ github.workspace }} false
+        run: dotnet run --project DDC.CLI/DDC.CLI.csproj --configuration Release --no-restore ${{ steps.read_dofus_version.outputs.dofus_path }} . ${{ github.workspace }} false
 
   # extract-types:
   #   name: Extract game data types

@@ -8,27 +8,38 @@ internal class Program
     private static DirectoryInfo dofusFolder;
     private static DirectoryInfo bepinFolder;
     private static DirectoryInfo ddcFolder;
+    private static DirectoryInfo assetFolder;
+    private static string assetStudioPath;
 
-    static void Main(string[] args)
+    static async Task Main(string[] args)
     {
         dofusFolder = new DirectoryInfo(args[0]);
         bepinFolder = new DirectoryInfo(args[1]);
         ddcFolder = new DirectoryInfo(args[2]);
-        if(args.Length == 4 && args[3] == "true")
+        assetFolder = new DirectoryInfo(Path.Join(dofusFolder.FullName, "Dofus_Data/StreamingAssets/Content/Picto"));
+        assetStudioPath = args[3];
+
+        if (args.Length == 5 && args[4] == "true")
         {
             SetupBepIn();
             CreateBepInConfigFolder();
-            RunGame("Chainloader startup complete");
+            await RunGame("Chainloader startup complete");
             SetupInterop();
         }
 
+        // Extract types
         CleanPlugins();
-        BuildModelExtractor();
-        BuildExtractor();
+        await BuildModelExtractor();
 
+        // Extract assets & data
+        var bundles = assetFolder.GetFiles("*.bundle", SearchOption.AllDirectories);
+        var tasks = bundles.Select(b => ExtractAssetBundle(b.Directory!.Name, b.Name))
+            .Append(BuildDataExtractor())
+            .ToArray();
+        Task.WaitAll(tasks);
     }
 
-    static void Run(string cmd)
+    static async Task Run(string cmd)
     {
         Debug.WriteLine($"Execute: {cmd}");
         Process process = new();
@@ -42,7 +53,8 @@ internal class Program
         process.StartInfo = startInfo;
         //process.StandardOutput
         process.Start();
-        process.WaitForExit();
+        //process.WaitForExit();
+        await process.WaitForExitAsync();
         //while (!process.StandardOutput.EndOfStream)
         //{
         //    string line = process.StandardOutput.ReadLine();
@@ -56,13 +68,13 @@ internal class Program
         CopyDirectory(dofusFolder.FullName, bepinFolder);
     }
 
-    static void RunGame(string untilLog)
+    static async Task RunGame(string untilLog)
     {
-        // \"dofus-beta-2.73.45.43\\Dofus.exe\"
+        // \"dofus-beta-2.73.45.43/Dofus.exe\"
         var dofusPath = Path.Combine(dofusFolder.FullName, "Dofus.exe");
         var scriptPath = Path.Combine(ddcFolder.FullName, "scripts/bepinex-run-until");
         var cmd = $"node \"{scriptPath}\" \"{dofusPath}\" \"{untilLog}\"";
-        Run(cmd);
+        await Run(cmd);
     }
 
     static void SetupInterop()
@@ -73,10 +85,10 @@ internal class Program
         CopyDirectory(ddcPath, new DirectoryInfo(dofusPath));
     }
 
-    static void BuildModelExtractor()
+    static async Task BuildModelExtractor()
     {
-        BuildProject("DDC.ModelExtractor");
-        CopyPlugins("DDC.ModelExtractor");
+        await BuildProject("DDC.ModelExtractor");
+        await CopyPlugins("DDC.ModelExtractor");
 
         var configPath = Path.Combine(dofusFolder.FullName, "BepInEx", "config", "DDC.ModelExtractor.cfg");
         var generatedFolder = Path.Combine(ddcFolder.FullName, "DDC", "Generated");
@@ -86,24 +98,24 @@ internal class Program
             OutputDirectory = {generatedFolder}
             ");
 
-        RunGame("DDC_type model generation complete.");
+        await RunGame("DDC_type model generation complete.");
         CleanPlugins();
     }
 
-    static void BuildExtractor()
+    static async Task BuildDataExtractor()
     {
-        BuildProject("DDC.Extractor");
-        CopyPlugins("DDC.Extractor");
+        await BuildProject("DDC.Extractor");
+        await CopyPlugins("DDC.Extractor");
 
         var configPath = Path.Combine(dofusFolder.FullName, "BepInEx", "config", "DDC.Extractor.cfg");
-        var extractedFolder = Path.Combine(dofusFolder.FullName, "extracted-data");
+        var extractedFolder = Path.Combine(dofusFolder.FullName, "extracted/data");
         File.WriteAllText(configPath,
             @$"
             [General]
             OutputDirectory = {extractedFolder}
             ");
 
-        RunGame("DDC_data extraction complete.");
+        await RunGame("DDC_data extraction complete.");
         CleanPlugins();
     }
 
@@ -118,11 +130,11 @@ internal class Program
         }
     }
 
-    static void CopyPlugins(string projectName)
+    static async Task CopyPlugins(string projectName)
     {
         var pluginsFolder = Path.Combine(dofusFolder.FullName, "BepInEx", "plugins");
         var bin = Path.Combine(ddcFolder.FullName, projectName, "bin/Release/net6.0/DDC*.dll");
-        Run($"copy {bin} {pluginsFolder}");
+        await Run($"copy {bin} {pluginsFolder}");
         //CopyDirectory(pluginsFolder, new DirectoryInfo(Path.Combine(ddcFolder.FullName, projectName, "bin/Release/net6.0")));
     }
 
@@ -133,11 +145,11 @@ internal class Program
         Directory.CreateDirectory(configFolder);
     }
 
-    static void BuildProject(string projectName)
+    static async Task BuildProject(string projectName)
     {
         var csproj = Path.Combine(ddcFolder.FullName, projectName, projectName + ".csproj");
         var cmd = $"dotnet build {csproj} --configuration Release --no-restore";
-        Run(cmd);
+        await Run(cmd);
     }
 
     static void CopyDirectory(string destDir, DirectoryInfo sourceDir)
@@ -159,20 +171,54 @@ internal class Program
         }
     }
 
+    static async Task ExtractAssetBundle(string bundleFolder, string bundleName)
+    {
+        var input = Path.Combine(assetFolder.FullName, bundleFolder, bundleName);
+        bundleName = bundleName.Replace("_.bundle", "");
+        bundleName = bundleName.Replace(".bundle", "");
+        var output = Path.Combine(dofusFolder.FullName, "extracted/assets", bundleFolder, bundleName);
+        Directory.CreateDirectory(output);
+        Debug.WriteLine($"Extracting: {bundleFolder}/{bundleName} to: {output}");
+        Console.WriteLine($"Extracting: {bundleFolder}/{bundleName} to: {output}");
+        //var input = "C:/Users/Blank/AppData/Local/Ankama/Dofus-beta/Dofus_Data/StreamingAssets/Content/Picto/Spells/spellstate_.bundle";
+        //var output = "C:/Users//Blank/AppData//Local/Ankama/Dofus-beta/Dofus_Data/StreamingAssets/Content/Picto/Spells/spellstate/";
+        //var assetStudioPath = "./AssetStudio.CLI.exe";
+        var cmd = $"{assetStudioPath} \"{input}\" \"{output}\" --silent --types Sprite --game Normal --unity_version 2022.3.42f1 --logger_flags Error";
+        await Run(cmd);
+        var sprites = new DirectoryInfo(Path.Combine(output, "Sprite"));
+        foreach (var file in sprites.GetFiles())
+        {
+            try
+            {
+                file.MoveTo(Path.Combine(output, file.Name));
+            }
+            catch (Exception)
+            {
+            }
+        }
+        try
+        {
+            sprites.Delete();
+        }
+        catch (Exception)
+        {
+        }
+    }
+
 }
 
 public static class Extensions
 {
     public static void DeleteSafe(this FileInfo file)
     {
-        while(true)
+        while (true)
         {
             try
             {
                 file.Delete();
                 return;
             }
-            catch (UnauthorizedAccessException e)
+            catch (UnauthorizedAccessException)
             {
                 Thread.Sleep(100);
                 //file.DeleteSafe();

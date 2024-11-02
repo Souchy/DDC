@@ -79,75 +79,11 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore
 
+      # CLI
       - name: Run CLI
         run: dotnet run --project DDC.CLI/DDC.CLI.csproj --configuration Release --no-restore ${{ steps.read_dofus_version.outputs.dofus_path }} . ${{ github.workspace }} false
 
-  # extract-types:
-  #   name: Extract game data types
-  #   runs-on: windows-latest
-  #   needs: setup
-  #   steps:
-  #     - name: Build DDC.ModelExtractor plugin
-  #       run: dotnet build DDC.ModelExtractor/DDC.ModelExtractor.csproj --configuration Release --no-restore
-
-  #     - name: Copy plugin
-  #       run: copy DDC.ModelExtractor/bin/Release/net6.0/DDC*.dll ${{ steps.read_dofus_version.outputs.dofus_path }}/BepInEx/plugins
-
-  #     - name: Create BepInEx config folder
-  #       run: md ${{ steps.read_dofus_version.outputs.dofus_path }}/BepInEx/config -Force
-
-  #     - name: Write DDC.ModelExtractor configuration
-  #       run: |
-  #         $Configuration = @'
-  #         [General]
-  #         OutputDirectory = ${{ github.workspace }}/DDC/Generated/
-  #         '@
-  #         echo "$Configuration" > ${{ steps.read_dofus_version.outputs.dofus_path }}/BepInEx/config/DDC.ModelExtractor.cfg
-
-  #     - name: Run game to extract types
-  #       run: node scripts/bepinex-run-until "${{ steps.read_dofus_version.outputs.dofus_path }}\Dofus.exe" "DDC type model generation complete."
-        
-  #     - name: Cleanup plugin
-  #       run: rm ${{ steps.read_dofus_version.outputs.dofus_path }}/BepInEx/plugins/DDC.ModelExtractor.dll
-
-  #     - run: ls "${{ github.workspace }}/DDC/Generated"
-  #     # - run: ls "${{ github.workspace }}/DDC/Generated/Core/DataCenter/Metadata/Spell"
-
-      - name: Upload extracted types to artifacts
-        if: ${{ github.event_name != 'release' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: types
-          path: ${{ github.workspace }}/DDC/Generated
-          if-no-files-found: 'error'
-        
-  # # extract-data:
-  # #   name: Extract game data
-  # #   runs-on: windows-latest
-  # #   needs: extract-types
-  # #   steps:
-  #     - name: Build DDC.Extractor plugin
-  #       run: dotnet build DDC.Extractor/DDC.Extractor.csproj --configuration Release --no-restore
-
-  #     - name: Copy plugin
-  #       run: copy DDC.Extractor/bin/Release/net6.0/DDC*.dll ${{ steps.read_dofus_version.outputs.dofus_path }}/BepInEx/plugins
-
-  #     - name: Create BepInEx config folder
-  #       run: md ${{ steps.read_dofus_version.outputs.dofus_path }}/BepInEx/config -Force
-
-  #     - name: Write DDC.Extractor configuration
-  #       run: |
-  #         $Configuration = @'
-  #         [General]
-  #         OutputDirectory = ./extracted-data
-  #         '@
-  #         echo "$Configuration" > ${{ steps.read_dofus_version.outputs.dofus_path }}/BepInEx/config/DDC.Extractor.cfg
-
-  #     - name: Extract data
-  #       # run: cd ${{ steps.read_dofus_version.outputs.dofus_path }}; node ../scripts/bepinex-run-until "Dofus.exe" "DDC data extraction complete."
-  #       run: node scripts/bepinex-run-until "${{ steps.read_dofus_version.outputs.dofus_path }}\Dofus.exe" "DDC data extraction complete."
-  #       timeout-minutes: 30
-
+      # Add metadata
       - name: Create metadata file
         run: |
           $Metadata = @{
@@ -157,30 +93,48 @@ jobs:
           }
           $MetadataJson = $Metadata | ConvertTo-Json
           $null = Write-Host $MetadataJson
-          $null = $MetadataJson | Out-File -FilePath "${{ steps.read_dofus_version.outputs.dofus_path }}/extracted-data/metadata.json"
+          $null = $MetadataJson | Out-File -FilePath "${{ steps.read_dofus_version.outputs.dofus_path }}/extracted/metadata.json"
 
-      - name: Create release archive
-        if: ${{ github.event_name == 'release' }}
-        run: |
-          cd ${{ steps.read_dofus_version.outputs.dofus_path }}/extracted-data
-          7z a data.zip .
-
-      - name: Upload compiled libraries to release
-        if: ${{ github.event_name == 'release' }}
-        uses: svenstaro/upload-release-action@v2
+      # Upload archives artifacts
+      - name: Upload extracted types to artifacts
+        if: ${{ github.event_name != 'release' }}
+        uses: actions/upload-artifact@v4
         with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: ${{ steps.read_dofus_version.outputs.dofus_path }}/extracted-data/data.zip
-          asset_name: data.zip
-          tag: ${{ github.ref }}
-
-      - name: Upload compiled library to artifacts
+          name: types
+          path: ${{ github.workspace }}/DDC/Generated
+          if-no-files-found: 'error'
+          
+      - name: Upload extracted assets to artifacts
+        if: ${{ github.event_name != 'release' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: assets
+          path: ${{ steps.read_dofus_version.outputs.dofus_path }}/extracted/assets
+          if-no-files-found: 'error'
+        
+      - name: Upload extracted data to artifacts
         if: ${{ github.event_name != 'release' }}
         uses: actions/upload-artifact@v4
         with:
           name: data
-          path: ${{ steps.read_dofus_version.outputs.dofus_path }}/extracted-data
+          path: ${{ steps.read_dofus_version.outputs.dofus_path }}/extracted/data
           if-no-files-found: 'error'
+
+      # Create release
+      - name: Create release archive
+        if: ${{ github.event_name == 'release' }}
+        run: |
+          cd ${{ steps.read_dofus_version.outputs.dofus_path }}
+          7z a extracted.zip extracted
+
+      - name: Upload archive to release
+        if: ${{ github.event_name == 'release' }}
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ${{ steps.read_dofus_version.outputs.dofus_path }}/extracted.zip
+          asset_name: extracted.zip
+          tag: ${{ github.ref }}
 
 permissions:
   contents: write

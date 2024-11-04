@@ -1,9 +1,12 @@
 ﻿using Core.DataCenter;
 using Core.DataCenter.Metadata.Alliance;
 using Core.DataCenter.Metadata.Appearance;
+using Core.DataCenter.Metadata.Bonus;
+using Core.DataCenter.Metadata.Bonus.Criteria;
 using Core.DataCenter.Metadata.Breed;
 using Core.DataCenter.Metadata.Challenge;
 using Core.DataCenter.Metadata.Effect;
+using Core.DataCenter.Metadata.Effect.Instance;
 using Core.DataCenter.Metadata.House;
 using Core.DataCenter.Metadata.Idol;
 using Core.DataCenter.Metadata.Item;
@@ -11,9 +14,12 @@ using Core.DataCenter.Metadata.Job;
 using Core.DataCenter.Metadata.Monster;
 using Core.DataCenter.Metadata.OptionalFeatures;
 using Core.DataCenter.Metadata.Progression;
+using Core.DataCenter.Metadata.Quest;
+using Core.DataCenter.Metadata.Quest.Objective;
 using Core.DataCenter.Metadata.Social;
 using Core.DataCenter.Metadata.Spell;
 using Core.DataCenter.Metadata.World;
+using Il2CppInterop.Runtime.InteropTypes;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -85,7 +91,7 @@ public class ExtractRoots
         try
         {
             Extractor.Logger.LogInfo($"Extracting ROOTs (" + roots.Count() + ") =================");
-            
+
             string path = Path.Join(Extractor.OutputDirectory);
             if (Directory.Exists(path))
                 Directory.Delete(path, true);
@@ -113,7 +119,7 @@ public class ExtractRoots
             {
                 //if (prop.Name != "itemsRoot") // && prop.Name != "spellsRoot" && prop.Name != nameof(DataCenterModule.spellLevelsRoot))
                 //    return null;
-                if(dangerousTypes.Select(t => t.Name.ToLower() + "root").Contains(prop.Name.ToLower()))
+                if (dangerousTypes.Select(t => t.Name.ToLower() + "root").Contains(prop.Name.ToLower()))
                 {
                     Extractor.Logger.LogMessage($"Ignoring property: " + prop.Name);
                     return null;
@@ -250,10 +256,89 @@ public class ExtractRoots
         }
     }
 
+    private Type[] GetSubTypes(Type t)
+    {
+        var types = t.Assembly.GetTypes().Where(t => t.BaseType == t);
+        return types.ToArray();
+    }
+
+    private static object[] Converts(Il2CppObjectBase b)
+    {
+        object[] converts = [
+            b.TryCast<Weapons>(),
+        ];
+
+        var t = typeof(Bonuses);
+        var types = t.Assembly.GetTypes().Where(t => t.BaseType == t);
+
+        if (b is Bonuses)
+        {
+            converts = [
+                b.TryCast<MonsterBonus>(), b.TryCast<MonsterDropChanceBonus>(), 
+                b.TryCast<MonsterStarRateBonus>(), b.TryCast<MonsterXPBonus>(), b.TryCast<MountBonus>(),
+                b.TryCast<QuestBonus>(),b.TryCast<QuestKamasBonus>(),b.TryCast<MonsterLightBonus>(),
+                b.TryCast<MonsterLightBonus>(),
+            ];
+        }
+        if (b is BonusesCriterions)
+        {
+            converts = [
+                b.TryCast<BonusesAreaCriterion>(), b.TryCast<BonusesEquippedItemCriterion>(), b.TryCast<BonusesMonsterCriterion>(),
+                b.TryCast<BonusesMonsterFamilyCriterion>(), b.TryCast<BonusesQuestCategoryCriterion>(), b.TryCast<BonusesSubAreaCriterion>(),
+            ];
+        }
+        if (b is EffectInstance)
+        {
+            converts = [
+                b.TryCast<EffectInstanceDice>(), b.TryCast<EffectInstanceMinMax>(), b.TryCast<EffectInstanceCreature>(),
+                b.TryCast<EffectInstanceDate>(), b.TryCast<EffectInstanceDuration>(), b.TryCast<EffectInstanceMount>(),
+                b.TryCast<EffectInstanceLadder>(), b.TryCast<EffectInstanceString>(),
+                b.TryCast<EffectInstanceInteger>(),
+            ];
+        }
+        if (b is QuestObjectives)
+        {
+            converts = [
+                b.TryCast<QuestObjectiveBringItemToNpc>(), b.TryCast<QuestObjectiveBringSoulToNpc>(),
+                b.TryCast<QuestObjectiveCraftItem>(), b.TryCast<QuestObjectiveDiscoverMap>(), b.TryCast<QuestObjectiveDiscoverSubArea>(),
+                b.TryCast<QuestObjectiveDuelSpecificPlayer>(), b.TryCast<QuestObjectiveFightMonster>(), b.TryCast<QuestObjectiveFightMonstersOnMap>(),
+                b.TryCast<QuestObjectiveFreeForm>(), b.TryCast<QuestObjectiveGoToNpc>(), b.TryCast<QuestObjectiveMultiFightMonster>(),
+                b.TryCast<QuestObjectiveParameters>(),
+            ];
+        }
+
+        if (b is SocialRightsGroup)
+        {
+            converts = [b.TryCast<AllianceRightGroups>(),];
+        }
+        if (b is SocialRights)
+        {
+            converts = [b.TryCast<AllianceRights>(),];
+        }
+        if (b is SocialTags)
+        {
+            converts = [b.TryCast<AllianceTags>()];
+        }
+        if (b is SocialTagsTypes)
+        {
+            converts = [b.TryCast<AllianceTagsTypes>()];
+        }
+        return converts;
+    }
+
     public static object? ConvertType(object original, string count = "")
     {
         try
         {
+            // Convert to implemented type
+            if (original is Il2CppObjectBase b)
+            {
+                var converts = Converts(b);
+                var newobj = converts.FirstOrDefault(o => o != null);
+                if (newobj != null)
+                    original = newobj;
+            }
+
             var type1 = original.GetType();
             if (type1.FullName.EndsWith("Regex"))
                 return ((Il2CppSystem.Text.RegularExpressions.Regex) original).ToString();
@@ -434,6 +519,7 @@ public class ExtractRoots
                     else if (val.GetType().Name.Contains("HashSet"))
                     {
                         // TODO HashSets unsupported for now. Only SpellScripts uses it and it's recursive anyway so we don't care.
+                        Extractor.Logger.LogError("HashSets not supported for now. " + prop.Name + ": " + val.GetType() + " vs " + genericType);
                         return null;
                     }
                     else
@@ -454,6 +540,12 @@ public class ExtractRoots
                     {
                         if (item is null) continue;
                         var item2 = ConvertType(item);
+                        if (item is EffectInstance)
+                        {
+
+                        }
+                        // faut pas que ce soit un root type, ceux là sont déjà sérializer on their own.
+                        // faut seulement les référencer par ID plutôt que par object reference, sinon on a une sérialization en boucle infinie
                         if (item2 != null && !rootTypes.Contains(item2.GetType()))
                             meth.Invoke(list2, [item2]);
                     }
@@ -462,7 +554,7 @@ public class ExtractRoots
                 else
                 if (prop.PropertyType.GenericTypeArguments.Length == 2)
                 {
-                    Extractor.Logger.LogWarning("Error: unimplemented dictionary: " + inst.GetType().FullName + " -> " + prop.Name + ": " + genericType);
+                    Extractor.Logger.LogError("Error: unimplemented dictionary: " + inst.GetType().FullName + " -> " + prop.Name + ": " + genericType);
                     //var dic2 = Activator.CreateInstance(genericType) as IDictionary;
                     ////Dictionary<int, int> asd;
                     ////asd.Add(0, 0);
@@ -520,6 +612,7 @@ public class ExtractRoots
             //if (type1.FullName == "Il2CppSystem.Text.RegularExpressions.Regex") return typeof(string);
 
             Type type2 = Type.GetType("Generated." + type1.FullName + ", DDC");
+
             if (type2 == null) return type1;
             return type2;
         }

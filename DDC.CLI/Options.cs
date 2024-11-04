@@ -14,7 +14,7 @@ internal class Options
     [Option('o', "output", Required = false, HelpText = "Path to extracted output folder")]
     public string? OutputPath { get; set; }
 
-    [Option('d', "dofus", Required = true, HelpText = "Path to Dofus folder")]
+    [Option('i', "input", Required = true, HelpText = "Path to Dofus folder")]
     public string DofusFolderPath { get; set; }
 
     [Option('w', "workspace", Required = true, HelpText = "Path to DDC workspace folder")]
@@ -25,6 +25,9 @@ internal class Options
 
     [Option('a', "assetstudio", Required = false, HelpText = "Path to AssetStudio download folder")]
     public string? AssetStudioPath { get; set; }
+
+    [Option('d', "debuglocaldata", Required = false, HelpText = "Debug local data (deactivates bepin setup, assets and model extractiong)")]
+    public bool? DebugLocalData { get; set; }
 
     //    dofusFolder = new DirectoryInfo(args[0]);
     //    bepinFolder = new DirectoryInfo(args[1]);

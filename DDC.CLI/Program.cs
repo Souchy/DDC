@@ -22,33 +22,35 @@ internal class Program
         dofusFolder = new DirectoryInfo(opts.DofusFolderPath);
         outputFolder = new DirectoryInfo(opts.OutputPath ?? Path.Combine(opts.DofusFolderPath, "extracted"));
 
-        // Extract assets asynchronously
         var tasks = Enumerable.Empty<Task>();
-        if (opts.AssetStudioPath != null)
-        {
-            assetFolder = new DirectoryInfo(Path.Join(dofusFolder.FullName, "Dofus_Data/StreamingAssets/Content/Picto"));
-            var bundles = assetFolder.GetFiles("*.bundle", SearchOption.AllDirectories);
-            assetStudioPath = opts.AssetStudioPath;
-            tasks = bundles.Select(b => ExtractAssetBundle(b.Directory!.Name, b.Name));
-        }
 
-        // Install Bepin
-        if (opts.BepinFolderPath != null)
+        if(!opts.DebugLocalData.HasValue || !opts.DebugLocalData.Value)
         {
-            bepinFolder = new DirectoryInfo(opts.BepinFolderPath);
-            SetupBepIn();
-            CreateBepInConfigFolder();
-            await RunGame("Chainloader startup complete");
-            SetupInterop();
+            // Extract assets asynchronously
+            if (opts.AssetStudioPath != null)
+            {
+                assetFolder = new DirectoryInfo(Path.Join(dofusFolder.FullName, "Dofus_Data/StreamingAssets/Content/Picto"));
+                var bundles = assetFolder.GetFiles("*.bundle", SearchOption.AllDirectories);
+                assetStudioPath = opts.AssetStudioPath;
+                tasks = bundles.Select(b => ExtractAssetBundle(b.Directory!.Name, b.Name));
+            }
+            //Install Bepin
+            if (opts.BepinFolderPath != null)
+            {
+                bepinFolder = new DirectoryInfo(opts.BepinFolderPath);
+                SetupBepIn();
+                CreateBepInConfigFolder();
+                await RunGame("Chainloader startup complete");
+                SetupInterop();
+            }
+            //Extract types
+            await BuildModelExtractor();
         }
-
-        // Extract types
-        CleanPlugins();
-        await BuildModelExtractor();
 
         // Extract data
         tasks = tasks.Append(BuildDataExtractor());
         Task.WaitAll(tasks.ToArray());
+        CleanPlugins();
     }
 
     static async Task Run(string cmd)
@@ -90,6 +92,7 @@ internal class Program
 
     static async Task BuildModelExtractor()
     {
+        CleanPlugins();
         await BuildProject("DDC.ModelExtractor");
         await CopyPlugins("DDC.ModelExtractor");
 
@@ -102,11 +105,11 @@ internal class Program
             ");
 
         await RunGame("DDC_type model generation complete.");
-        CleanPlugins();
     }
 
     static async Task BuildDataExtractor()
     {
+        CleanPlugins();
         await BuildProject("DDC.Extractor");
         await CopyPlugins("DDC.Extractor");
 
@@ -119,7 +122,6 @@ internal class Program
             ");
 
         await RunGame("DDC_data extraction complete.");
-        CleanPlugins();
     }
 
     static void CleanPlugins()
@@ -151,7 +153,7 @@ internal class Program
     static async Task BuildProject(string projectName)
     {
         var csproj = Path.Combine(ddcFolder.FullName, projectName, projectName + ".csproj");
-        var cmd = $"dotnet build {csproj} --configuration Release --no-restore";
+        var cmd = $"dotnet build {csproj} --configuration Release --no-restore --property WarningLevel=0";
         await Run(cmd);
     }
 

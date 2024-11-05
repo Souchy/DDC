@@ -26,21 +26,7 @@ internal class Options
     [Option('a', "assetstudio", Required = false, HelpText = "Path to AssetStudio download folder")]
     public string? AssetStudioPath { get; set; }
 
-    [Option('d', "debuglocaldata", Required = false, HelpText = "Debug local data (deactivates bepin setup, assets and model extractiong)")]
+    [Option('d', "debuglocaldata", Required = false, HelpText = "Debug local data (removes bepin setup, assets and model extractiong)")]
     public bool? DebugLocalData { get; set; }
-
-    //    dofusFolder = new DirectoryInfo(args[0]);
-    //    bepinFolder = new DirectoryInfo(args[1]);
-    //    ddcFolder = new DirectoryInfo(args[2]);
-    //    assetFolder = new DirectoryInfo(Path.Join(dofusFolder.FullName, "Dofus_Data/StreamingAssets/Content/Picto"));
-    //     assetStudioPath = args[3];
-
-    //    if (args.Length == 5 && args[4] == "true")
-    //    {
-    //              SetupBepIn();
-    //              CreateBepInConfigFolder();
-    //              await RunGame("Chainloader startup complete");
-    //              SetupInterop();
-    //     }
 
 }

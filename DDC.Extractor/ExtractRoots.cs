@@ -256,75 +256,6 @@ public class ExtractRoots
         }
     }
 
-    private Type[] GetSubTypes(Type t)
-    {
-        var types = t.Assembly.GetTypes().Where(t => t.BaseType == t);
-        return types.ToArray();
-    }
-
-    private static object[] Converts(Il2CppObjectBase b)
-    {
-        object[] converts = [
-            b.TryCast<Weapons>(),
-        ];
-
-        var t = typeof(Bonuses);
-        var types = t.Assembly.GetTypes().Where(t => t.BaseType == t);
-
-        if (b is Bonuses)
-        {
-            converts = [
-                b.TryCast<MonsterBonus>(), b.TryCast<MonsterDropChanceBonus>(), 
-                b.TryCast<MonsterStarRateBonus>(), b.TryCast<MonsterXPBonus>(), b.TryCast<MountBonus>(),
-                b.TryCast<QuestBonus>(),b.TryCast<QuestKamasBonus>(),b.TryCast<MonsterLightBonus>(),
-                b.TryCast<MonsterLightBonus>(),
-            ];
-        }
-        if (b is BonusesCriterions)
-        {
-            converts = [
-                b.TryCast<BonusesAreaCriterion>(), b.TryCast<BonusesEquippedItemCriterion>(), b.TryCast<BonusesMonsterCriterion>(),
-                b.TryCast<BonusesMonsterFamilyCriterion>(), b.TryCast<BonusesQuestCategoryCriterion>(), b.TryCast<BonusesSubAreaCriterion>(),
-            ];
-        }
-        if (b is EffectInstance)
-        {
-            converts = [
-                b.TryCast<EffectInstanceDice>(), b.TryCast<EffectInstanceMinMax>(), b.TryCast<EffectInstanceCreature>(),
-                b.TryCast<EffectInstanceDate>(), b.TryCast<EffectInstanceDuration>(), b.TryCast<EffectInstanceMount>(),
-                b.TryCast<EffectInstanceLadder>(), b.TryCast<EffectInstanceString>(),
-                b.TryCast<EffectInstanceInteger>(),
-            ];
-        }
-        if (b is QuestObjectives)
-        {
-            converts = [
-                b.TryCast<QuestObjectiveBringItemToNpc>(), b.TryCast<QuestObjectiveBringSoulToNpc>(),
-                b.TryCast<QuestObjectiveCraftItem>(), b.TryCast<QuestObjectiveDiscoverMap>(), b.TryCast<QuestObjectiveDiscoverSubArea>(),
-                b.TryCast<QuestObjectiveDuelSpecificPlayer>(), b.TryCast<QuestObjectiveFightMonster>(), b.TryCast<QuestObjectiveFightMonstersOnMap>(),
-                b.TryCast<QuestObjectiveFreeForm>(), b.TryCast<QuestObjectiveGoToNpc>(), b.TryCast<QuestObjectiveMultiFightMonster>(),
-                b.TryCast<QuestObjectiveParameters>(),
-            ];
-        }
-
-        if (b is SocialRightsGroup)
-        {
-            converts = [b.TryCast<AllianceRightGroups>(),];
-        }
-        if (b is SocialRights)
-        {
-            converts = [b.TryCast<AllianceRights>(),];
-        }
-        if (b is SocialTags)
-        {
-            converts = [b.TryCast<AllianceTags>()];
-        }
-        if (b is SocialTagsTypes)
-        {
-            converts = [b.TryCast<AllianceTagsTypes>()];
-        }
-        return converts;
-    }
 
     public static object? ConvertType(object original, string count = "")
     {
@@ -333,10 +264,7 @@ public class ExtractRoots
             // Convert to implemented type
             if (original is Il2CppObjectBase b)
             {
-                var converts = Converts(b);
-                var newobj = converts.FirstOrDefault(o => o != null);
-                if (newobj != null)
-                    original = newobj;
+                original = SubtypeCasting.Converts(b);
             }
 
             var type1 = original.GetType();

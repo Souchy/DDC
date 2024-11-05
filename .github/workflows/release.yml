@@ -96,22 +96,6 @@ jobs:
           $null = $MetadataJson | Out-File -FilePath "${{ steps.read_dofus_version.outputs.dofus_path }}/extracted/metadata.json"
 
       # Upload archives artifacts
-      - name: Upload extracted types to artifacts
-        if: ${{ github.event_name != 'release' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: types
-          path: ${{ github.workspace }}/DDC/Generated
-          if-no-files-found: 'error'
-          
-      - name: Upload extracted assets to artifacts
-        if: ${{ github.event_name != 'release' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: assets
-          path: ${{ steps.read_dofus_version.outputs.dofus_path }}/extracted/assets
-          if-no-files-found: 'error'
-        
       - name: Upload extracted data to artifacts
         if: ${{ github.event_name != 'release' }}
         uses: actions/upload-artifact@v4
@@ -119,6 +103,22 @@ jobs:
           name: data
           path: ${{ steps.read_dofus_version.outputs.dofus_path }}/extracted/data
           if-no-files-found: 'error'
+
+      - name: Upload extracted assets to artifacts
+        if: ${{ github.event_name != 'release' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: assets
+          path: ${{ steps.read_dofus_version.outputs.dofus_path }}/extracted/assets
+          if-no-files-found: 'warn'
+          
+      - name: Upload extracted types to artifacts
+        if: ${{ github.event_name != 'release' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: types
+          path: ${{ github.workspace }}/DDC/Generated
+          if-no-files-found: 'warn'
 
       # Create release
       - name: Create release archive

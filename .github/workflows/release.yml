@@ -83,7 +83,7 @@ jobs:
         run: curl https://nightly.link/voidn0n/Studio/workflows/build/main/net8.0-d0d4092801558a2444e13f5e24a27118a9c72f4c.zip -o AssetStudio.zip
 
       - name: Extract AssetStudio
-        run: 7z x AssetStudio.zip -o "${{ github.workspace }}/studio" -aoa
+        run: 7z x AssetStudio.zip -o"${{ github.workspace }}/studio" -aoa
 
       # CLI
       - name: Run CLI

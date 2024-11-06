@@ -29,6 +29,12 @@ jobs:
           echo @dofus-batteries-included:registry=https://npm.pkg.github.com > ~/.npmrc
           echo //npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }} >> ~/.npmrc
 
+      - name: Download AssetStudio fork
+        run: curl https://nightly.link/voidn0n/Studio/actions/artifacts/1954357318.zip -o AssetStudio.zip
+
+      - name: Extract AssetStudio
+        run: 7z x AssetStudio.zip -o"${{ github.workspace }}/studio" -aoa
+        
       - name: Install Cytrus v6
         run: npm i @dofus-batteries-included/cytrus-v6 -g
 
@@ -78,12 +84,6 @@ jobs:
 
       - name: Restore dependencies
         run: dotnet restore
-
-      - name: Download AssetStudio fork
-        run: curl https://nightly.link/voidn0n/Studio/workflows/build/main/net8.0-d0d4092801558a2444e13f5e24a27118a9c72f4c.zip -o AssetStudio.zip
-
-      - name: Extract AssetStudio
-        run: 7z x AssetStudio.zip -o"${{ github.workspace }}/studio" -aoa
 
       # CLI
       - name: Run CLI

@@ -7,3 +7,4 @@ Interop/
 .vs/
 dist/
 DDC/generated/
+DDC/genpolymorphic/

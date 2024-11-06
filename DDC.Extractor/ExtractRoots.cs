@@ -31,6 +31,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+using static Il2CppSystem.Net.Http.Headers.Parser;
 
 namespace DDC.Extractor;
 public class ExtractRoots
@@ -75,7 +76,7 @@ public class ExtractRoots
                 //Extractor.Logger.LogInfo($"Transforming root items (" + size + "): " + items + ": " + items?.GetType().FullName);
                 var itemType = items.GetType().GenericTypeArguments[0];
                 //Extractor.Logger.LogInfo($"Transforming root list type:  {itemType.Name}"); // + items.Count);
-                var genericType = GetCorrespondingType(items.GetType());
+                var genericType = Converter.GetCorrespondingType(items.GetType());
                 //Extractor.Logger.LogInfo($"Transforming root new list type: " + genericType.FullName);
                 var items2 = Activator.CreateInstance(genericType) as ICollection;
                 var methAdd = genericType.GetMethod("Add");
@@ -165,7 +166,7 @@ public class ExtractRoots
                     if (dangerousTypes.Contains(itemType))
                         return;
                     //Extractor.Logger.LogInfo($"Transforming root list type:  {itemType.Name}"); // + items.Count);
-                    var genericType = GetCorrespondingType(items.GetType());
+                    var genericType = Converter.GetCorrespondingType(items.GetType());
                     //Extractor.Logger.LogInfo($"Transforming root new list type: " + genericType.FullName);
                     var items2 = Activator.CreateInstance(genericType) as ICollection;
                     var methAdd = genericType.GetMethod("Add");
@@ -205,11 +206,12 @@ public class ExtractRoots
                 if (item is null) continue;
                 //if (count == FAST_TAKES) break;
                 count++;
-                var item2 = ConvertType(item, count.ToString());
+                var item2 = Converter.ConvertType(item, count.ToString());
                 if (item2 != null)
                     methAdd.Invoke(items2, [item2]);
             }
-            if(itemType == typeof(Core.DataCenter.Metadata.Item.ItemSets))
+
+            if (itemType == typeof(Core.DataCenter.Metadata.Item.ItemSets))
             {
                 foreach (var i in items2)
                 {
@@ -231,7 +233,7 @@ public class ExtractRoots
             //Extractor.Logger.LogInfo($"Created Directory. " + path);
 
             await using FileStream stream = File.OpenWrite(path + "/" + itemType.Name + ".json");
-            await JsonSerializer.SerializeAsync(stream, items2, ExtractorBehaviour.JsonSerializerOptions);
+            await JsonSerializer.SerializeAsync<object>(stream, items2, ExtractorBehaviour.JsonSerializerOptions);
             //await Utf8Json.JsonSerializer.SerializeAsync(stream, items2);
             stream.Flush();
 
@@ -263,8 +265,6 @@ public class ExtractRoots
             //new Il2CppSystem.IO.TextWriter().;
 
 
-
-
             Extractor.Logger.LogInfo($"Extracted ROOT of type {itemType.Name}. (" + count + ")");
         }
         catch (Exception ex)
@@ -274,317 +274,4 @@ public class ExtractRoots
 
     }
 
-    public static object? ConvertType(object original, string count = "")
-    {
-        try
-        {
-            // Convert to implemented type
-            if (original is Il2CppObjectBase b)
-            {
-                original = SubtypeCasting.Converts(original, b);
-                //if(original is EffectInstanceDice d)
-                //{
-                //    Extractor.Logger.LogWarning("ei dicenum: " + original.GetType() + " : " + d.diceNum);
-                //}
-            }
-
-            var type1 = original.GetType();
-            if (type1.FullName.EndsWith("Regex"))
-                return ((Il2CppSystem.Text.RegularExpressions.Regex) original).ToString();
-
-            Type type2 = GetCorrespondingType(type1);
-
-            if (debug && !string.IsNullOrEmpty(count))
-                Extractor.Logger.LogInfo($"ConvertingType: {type1.FullName} to {type2.FullName}. " + count);
-
-            if (type1 == type2)
-                return original;
-
-            var inst = Activator.CreateInstance(type2);
-            foreach (var prop in inst.GetType().GetProperties())
-            {
-                try
-                {
-                    if (ShouldSkipProperty(inst, original, prop))
-                        continue;
-                    var oProp = original.GetType().GetProperty(prop.Name, BindingFlags.Instance | BindingFlags.Public); //, BindingFlags.Instance);
-                    if (oProp == null)
-                    {
-                        if (debug)
-                            Extractor.Logger.LogWarning($"Converting property original (" + original + "), oProp is null (" + prop.Name + ": " + prop.PropertyType.Name + ").");
-                        continue;
-                    }
-                    var val = ConvertProperty(original, oProp);
-                    prop.SetValue(inst, val);
-                }
-                catch (Exception ex)
-                {
-                    Extractor.Logger.LogWarning($"Exception ConvertingType loop: " + ex.Message + " -> " + ex.StackTrace);
-                }
-            }
-            //Extractor.Logger.LogInfo($"Converted type.");
-            return inst;
-        }
-        catch (Exception ex)
-        {
-            Extractor.Logger.LogWarning($"Exception ConvertingType: " + ex.Message + " -> " + ex.StackTrace);
-            return null;
-        }
-    }
-
-    public static bool ShouldSkipProperty(object inst, object original, PropertyInfo prop)
-    {
-        if (inst == null)
-        {
-            Extractor.Logger.LogError($"Converting property prop (" + original + "." + prop.Name + "), inst is null.");
-            return true;
-        }
-        if (rootTypes.Contains(prop.PropertyType))
-        {
-            if (debug)
-                Extractor.Logger.LogWarning($"Skip property " + prop.Name + ": " + prop.GetType().FullName);
-            return true;
-        }
-        if (prop.PropertyType.Name == "SpellScripts")
-        {
-            if (debug)
-                Extractor.Logger.LogWarning($"Skip weird, SpellScripts should be in rootTypes: " + prop.PropertyType.FullName);
-            return true;
-        }
-        if (prop.PropertyType == typeof(Il2CppSystem.Object))
-        {
-            if (debug)
-                Extractor.Logger.LogWarning($"Skip property: IL2.Object");
-            return true;
-        }
-
-        // Skip properties that dont have a corresponding field
-        Type baseType = original.GetType();
-        bool foundField = false;
-        while (baseType != null)
-        {
-            var staticField = baseType.GetField("NativeFieldInfoPtr_" + prop.Name, BindingFlags.Static | BindingFlags.NonPublic);
-            if (staticField != null)
-                foundField = true;
-            baseType = baseType.BaseType;
-        }
-        if (!foundField)
-        {
-            if (debug)
-                Extractor.Logger.LogWarning($"Skip property: no static field");
-            return true;
-        }
-
-        //if (dangerousProperties.Contains(prop.Name))
-        //    return true;
-        //if (inst.GetType().GetProperty("m_" + prop.Name) != null)
-        //{
-        //    //Extractor.Logger.LogInfo("ConvertingType skip prop by _m: " + prop.Name);
-        //    return true;
-        //}
-        //if (inst.GetType().GetProperty(prop.Name + "Id") != null || inst.GetType().GetProperty(prop.Name + "Ids") != null)
-        //{
-        //    //Extractor.Logger.LogInfo("ConvertingType skip prop by Id: " + prop.Name);
-        //    return true;
-        //}
-        if (prop.PropertyType.Name.Contains("MemoizedValues"))
-        {
-            if (debug)
-                Extractor.Logger.LogWarning($"Skip property: memoized value");
-            return true;
-        }
-        return false;
-    }
-
-    static object? ConvertProperty(object inst, PropertyInfo prop)
-    {
-        try
-        {
-            if (debug) // || inst.GetType() == typeof(SpellZoneDescr) || inst.GetType() == typeof(Spells))
-                Extractor.Logger.LogInfo($"Converting property  " + inst + "." + prop.Name + ": " + prop.PropertyType.FullName);
-
-            if (prop.PropertyType.IsEnum)
-            {
-                try
-                {
-                    return Convert.ToInt32(prop.GetValue(inst));
-                }
-                catch (Exception ex)
-                {
-                    Extractor.Logger.LogError($"Exception Converting property enum (" + inst + "." + prop.Name + ": " + prop.PropertyType.FullName + "): " + ex.Message + " -> " + ex.StackTrace);
-                    return null;
-                }
-            }
-            else
-            if (prop.PropertyType.IsPrimitive)
-            {
-                try
-                {
-                    return prop.GetValue(inst);
-                }
-                catch (Exception ex)
-                {
-                    Extractor.Logger.LogError($"Exception Converting property primitive (" + inst + "." + prop.Name + ": " + prop.PropertyType.FullName + "): " + ex.Message + " -> " + ex.StackTrace);
-                    return null;
-                }
-            }
-            else
-            if (prop.PropertyType == typeof(System.String))
-            {
-                try
-                {
-                    return prop.GetValue(inst);
-                }
-                catch (Exception ex)
-                {
-                    Extractor.Logger.LogError($"Exception Converting property string (" + inst + "." + prop.Name + ": " + prop.PropertyType.FullName + "): " + ex.Message + " -> " + ex.StackTrace);
-                    return null;
-                }
-            }
-            else
-            if (prop.PropertyType.IsGenericType)
-            {
-                var val = prop.GetValue(inst);
-                if (val == null)
-                {
-                    if (debug)
-                        Extractor.Logger.LogWarning($"Converting property list value is null in " + inst + "." + prop.Name + ": " + prop.PropertyType);
-                    return null;
-                }
-                var newGenericType = GetCorrespondingType(prop.PropertyType);
-                if (newGenericType == prop.PropertyType)
-                {
-                    Extractor.Logger.LogInfo($"Converting property list type didn't change");
-                    return val;
-                }
-                if (prop.PropertyType.GenericTypeArguments.Length == 1)
-                {
-                    IEnumerable list1 = null;
-                    //Extractor.Logger.LogInfo("ConvertingProperty list json1: " + val.GetType() + " vs " + genericType);
-                    if (val is IEnumerable)
-                    {
-                        list1 = val as IEnumerable;
-                    }
-                    else if (val.GetType().Name.Contains("HashSet"))
-                    {
-                        // TODO HashSets unsupported for now. Only SpellScripts uses it and it's recursive anyway so we don't care.
-                        Extractor.Logger.LogError("HashSets not supported for now. " + prop.Name + ": " + val.GetType() + " vs " + newGenericType);
-                        return null;
-                    }
-                    else
-                    {
-                        list1 = val.GetType().GetProperty("_items")?.GetValue(val) as IEnumerable;
-                    }
-                    //IEnumerable list2;
-                    ICollection list2 = Activator.CreateInstance(newGenericType) as ICollection;
-                    //Extractor.Logger.LogInfo("ConvertingProperty list json2: " + val.ToString() + " to " + list2);
-                    if (list1 == null)
-                    {
-                        Extractor.Logger.LogError($"Converting property list error - val: " + val + ", list1: " + list1 + ", list2: " + list2);
-                        return val;
-                    }
-                    var meth = newGenericType.GetMethod("Add");
-                    //var json = JsonSerializer.Serialize(val, options: JsonSerializerOptions);
-
-                    foreach (var i in list1)
-                    {
-                        var item = i;
-                        if (item is null) continue;
-                        //if (item is EffectInstance ei)
-                        //{
-                        //    var a = ei as Il2CppObjectBase;
-                        //    object dice = a.TryCast<EffectInstanceDice>();
-                        //    dice ??= a.TryCast<EffectInstanceMinMax>();
-                        //    dice ??= a.TryCast<EffectInstanceInteger>();
-                        //    if (dice != null) item = dice;
-                        //}
-                        var item2 = ConvertType(item);
-                        //if (item is EffectInstance ei)
-                        //{
-                        //    //var a = ei as Il2CppObjectBase;
-                        //    //object dice = a.TryCast<EffectInstanceDice>();
-                        //    //dice ??= a.TryCast<EffectInstanceMinMax>();
-                        //    //dice ??= a.TryCast<EffectInstanceInteger>();
-                        //    //if (dice != null) item = dice;
-                        //    Extractor.Logger.LogMessage("list item type: " + item.GetType() + " vs converted: " + item2.GetType());
-                        //}
-                        // faut pas que ce soit un root type, ceux là sont déjà sérializer on their own.
-                        // faut seulement les référencer par ID plutôt que par object reference, sinon on a une sérialization en boucle infinie
-                        if (item2 != null && !rootTypes.Contains(item2.GetType()))
-                            meth.Invoke(list2, [item2]);
-                            //list2.Add(item2);
-                    }
-                    return list2;
-                }
-                else
-                if (prop.PropertyType.GenericTypeArguments.Length == 2)
-                {
-                    Extractor.Logger.LogError("Error: unimplemented dictionary: " + inst.GetType().FullName + " -> " + prop.Name + ": " + newGenericType);
-                    //var dic2 = Activator.CreateInstance(genericType) as IDictionary;
-                    ////Dictionary<int, int> asd;
-                    ////asd.Add(0, 0);
-                    //var meth = genericType.GetMethod("Add");
-
-                    //foreach (var item in val)
-                    //{
-                    //    var item2 = ConvertType(item.GetType(), item);
-                    //    meth.Invoke(dic2, [item2]);
-                    //}
-                    return null;
-                }
-            }
-            else
-            {
-                var val = prop.GetValue(inst);
-                if (val == null) return null;
-                var val2 = ConvertType(val);
-                if (val2 == null) return null;
-                if (val2.GetType().FullName.StartsWith("Core.") || val2.GetType().FullName.StartsWith("Metadata."))
-                {
-                    //Extractor.Logger.LogWarning("ConvertingProperty ignore external type: " + inst + "." + prop.Name + ":" + val2.GetType().FullName);
-                    return null;
-                }
-                return val2;
-            }
-        }
-        catch (Exception ex)
-        {
-            Extractor.Logger.LogWarning("Exception ConvertingProperty (" + inst + ", " + prop + "): " + ex.Message + " -> " + ex.StackTrace);
-        }
-        return null;
-    }
-
-    static Type GetCorrespondingType(Type type1)
-    {
-        try
-        {
-            if (type1.IsPrimitive)
-            {
-                return type1;
-            }
-            if (type1.IsGenericType)
-            {
-                Type tbase = typeof(List<>);
-                if (type1.GenericTypeArguments.Length == 2)
-                {
-                    tbase = typeof(Dictionary<,>);
-                }
-                var args = type1.GenericTypeArguments.Select(GetCorrespondingType).ToArray();
-                var listType = tbase.MakeGenericType(args);
-                return listType;
-            }
-            if (type1.FullName.EndsWith("Regex")) return typeof(string);
-            //if (type1.FullName == "Il2CppSystem.Text.RegularExpressions.Regex") return typeof(string);
-
-            Type type2 = Type.GetType("Generated." + type1.FullName + ", DDC");
-
-            if (type2 == null) return type1;
-            return type2;
-        }
-        catch (Exception ex)
-        {
-            Extractor.Logger.LogWarning("Exception GetCorrespondingType: " + ex.Message);
-            return type1;
-        }
-    }
 }

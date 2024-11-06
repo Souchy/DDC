@@ -9,6 +9,13 @@ public class ExtractModelTypes
     public const BindingFlags bindingFlags = BindingFlags.Instance | BindingFlags.Public;
 
     static bool polymorphic = false;
+    static string RootFolder
+    {
+        get
+        {
+            return polymorphic ? "GenPolymorphic" : "Generated";
+        }
+    }
 
     public static async Task GetAllModels()
     {
@@ -52,7 +59,7 @@ public class ExtractModelTypes
     static async Task WriteCSharp(Type type)
     {
         var folderName = type.Namespace.Replace(".", "/");
-        var root = polymorphic ? ModelExtractor.OutputDirectory.Replace("Generated", "GenPolymorphic") : ModelExtractor.OutputDirectory;
+        var root = polymorphic ? ModelExtractor.OutputDirectory.Replace("Generated", RootFolder) : ModelExtractor.OutputDirectory;
         var folderPath = Path.Combine(root, folderName);
         Directory.CreateDirectory(folderPath);
         string filePath = $"{folderPath}/{type.Name}.cs";
@@ -82,7 +89,7 @@ public class ExtractModelTypes
 
             if (!string.IsNullOrWhiteSpace(str))
             {
-                var usings = GetUsingsAndNamespace(type, polymorphic ? "GenPolymorphic" : "Generated");
+                var usings = GetUsingsAndNamespace(type, RootFolder);
                 await File.WriteAllTextAsync(filePath, usings + str);
             }
         }
@@ -106,7 +113,6 @@ public class ExtractModelTypes
         try
         {
             StringBuilder sb = new StringBuilder();
-            //sb.AppendLine("namespace Generated." + type.Namespace + ";");
             sb.AppendLine($"public enum {type.Name} " + "{");
             var names = type.GetEnumNames();
             var values = type.GetEnumValues();
@@ -132,10 +138,6 @@ public class ExtractModelTypes
         try
         {
             StringBuilder sb = new StringBuilder();
-            //sb.AppendLine("using UnityEngine;");
-            //sb.AppendLine();
-            //sb.AppendLine("namespace Generated." + type.Namespace + ";");
-            //sb.AppendLine();
             sb.Append($"public struct {type.Name} ");
             sb.Append('{');
             sb.AppendLine();
@@ -193,28 +195,12 @@ public class ExtractModelTypes
         {
 
             StringBuilder sb = new StringBuilder();
-            //sb.AppendLine("using UnityEngine;");
-
-            ////if (type.FullName == "Core.DataCenter.Metadata.Appearance.SkinSlotsRules")
-            ////    sb.AppendLine("using Metadata.Appearance;");
-            //if (type.FullName == "Core.DataCenter.Metadata.Sound.SoundBones")
-            //    sb.AppendLine("using static Core.DataCenter.Metadata.Sound.SoundBones;");
-            //if (type.Name == "SoundBonesDictionary")
-            //{
-            //    return null;
-            //}
-
-            //sb.AppendLine();
-            //sb.AppendLine("namespace Generated." + type.Namespace + ";");
-            //sb.AppendLine();
-
             //sb.AppendLine(typeToJsonDerivedString(type));
-
             sb.Append($"public class {type.Name} ");
             if (type.BaseType != null && (type.BaseType.FullName.StartsWith("Core.DataCenter") || type.BaseType.FullName.StartsWith("Metadata")))
             {
                 sb.Append(": ");
-                sb.AppendLine(ConvertTypeName(type.BaseType));
+                sb.AppendLine(ConvertTypeName(type.BaseType, true));
             }
             sb.Append('{');
             sb.AppendLine();
@@ -267,16 +253,17 @@ public class ExtractModelTypes
         return false;
     }
 
-    static string ConvertTypeName(Type type)
+    static string ConvertTypeName(Type type, bool baseType = false)
     {
-        if (polymorphic) return "object";
+        if (polymorphic && !baseType && !type.IsPrimitive && !type.IsEnum && !type.IsGenericType && type != typeof(String)) return "object";
+
         var propType = type.FullName;
-        if (propType.StartsWith("Core.DataCenter.Metadata")) propType = "Generated." + propType;
-        else if (propType.StartsWith("Core.DataCenter.Types")) propType = "Generated." + propType;
-        else if (propType.StartsWith("Core.DataCenter.Interfaces")) propType = "Generated." + propType;
+        if (propType.StartsWith("Core.DataCenter.Metadata")) propType = RootFolder + "." + propType;
+        else if (propType.StartsWith("Core.DataCenter.Types")) propType = RootFolder + "." + propType;
+        else if (propType.StartsWith("Core.DataCenter.Interfaces")) propType = RootFolder + "." + propType;
         else if (propType.StartsWith("Core.")) propType = type.Name;
-        if (propType.StartsWith("Metadata.Enums")) propType = "Generated." + propType;
-        if (propType.StartsWith("Metadata.Appearance")) propType = "Generated." + propType;
+        if (propType.StartsWith("Metadata.Enums")) propType = RootFolder + "." + propType;
+        if (propType.StartsWith("Metadata.Appearance")) propType = RootFolder + "." + propType;
         else if (propType.StartsWith("Metadata.")) propType = type.Name;
 
         if (propType.EndsWith("Regex"))
@@ -294,7 +281,7 @@ public class ExtractModelTypes
             propType = propType.Substring(0, propType.IndexOf("`"));
             propType = propType.Replace("Il2CppStructArray", "List");
             propType += "<";
-            propType += string.Join(", ", type.GenericTypeArguments.Select(ConvertTypeName));
+            propType += string.Join(", ", type.GenericTypeArguments.Select(a => ConvertTypeName(a)));
             propType += ">";
         }
         return propType;

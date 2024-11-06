@@ -229,12 +229,12 @@ internal static class Converter
             var meth = newGenericType.GetMethod("Add");
             //var json = JsonSerializer.Serialize(val, options: JsonSerializerOptions);
 
-            List<string> strList = new();
+            //List<string> strList = new();
 
             foreach (var i in list1)
             {
-                var str = JsonSerializer.Serialize(i, ExtractorBehaviour.JsonSerializerOptions);
-                strList.Add(str);
+                //var str = JsonSerializer.Serialize(i, ExtractorBehaviour.JsonSerializerOptions);
+                //strList.Add(str);
 
                 var item = i;
                 if (item is null) continue;
@@ -263,7 +263,7 @@ internal static class Converter
                 //list2.Add(item2);
             }
 
-            string json = $"[{string.Join(", ", strList)}]";
+            //string json = $"[{string.Join(", ", strList)}]";
 
             return list2;
         }
@@ -301,7 +301,15 @@ internal static class Converter
                 {
                     tbase = typeof(Dictionary<,>);
                 }
-                var args = type1.GenericTypeArguments.Select(GetCorrespondingType).ToArray();
+                var args = type1.GenericTypeArguments
+                    .Select(GetCorrespondingType)
+                    .Select(a =>
+                    {
+                        if (!a.IsPrimitive && !a.IsEnum && !a.IsGenericType && a != typeof(String))
+                            return typeof(object);
+                        return a;
+                    })
+                    .ToArray();
                 var listType = tbase.MakeGenericType(args);
                 return listType;
             }

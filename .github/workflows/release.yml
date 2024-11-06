@@ -29,12 +29,12 @@ jobs:
           echo @dofus-batteries-included:registry=https://npm.pkg.github.com > ~/.npmrc
           echo //npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }} >> ~/.npmrc
 
-      - name: Download AssetStudio fork
-        run: curl https://nightly.link/voidn0n/Studio/actions/artifacts/1954357318.zip -o AssetStudio.zip
+      # - name: Download AssetStudio fork
+      #   run: curl https://nightly.link/voidn0n/Studio/actions/artifacts/1954357318.zip -o AssetStudio.zip
 
-      - name: Extract AssetStudio
-        run: 7z x AssetStudio.zip -o"${{ github.workspace }}/studio" -aoa
-        
+      # - name: Extract AssetStudio
+      #   run: 7z x AssetStudio.zip -o"${{ github.workspace }}/studio" -aoa
+
       - name: Install Cytrus v6
         run: npm i @dofus-batteries-included/cytrus-v6 -g
 
@@ -87,7 +87,8 @@ jobs:
 
       # CLI
       - name: Run CLI
-        run: dotnet run --project DDC.CLI/DDC.CLI.csproj --configuration Release --no-restore -i ${{ steps.read_dofus_version.outputs.dofus_path }} -w ${{ github.workspace }} -a ${{ github.workspace }}/studio/AssetStudio.CLI.exe
+        run: dotnet run --project DDC.CLI/DDC.CLI.csproj --configuration Release --no-restore -i ${{ steps.read_dofus_version.outputs.dofus_path }} -w ${{ github.workspace }} 
+        # -a ${{ github.workspace }}/studio/AssetStudio.CLI.exe
 
       # Add metadata
       - name: Create metadata file

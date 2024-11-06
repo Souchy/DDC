@@ -211,24 +211,24 @@ public class ExtractRoots
                     methAdd.Invoke(items2, [item2]);
             }
 
-            if (itemType == typeof(Core.DataCenter.Metadata.Item.ItemSets))
-            {
-                foreach (var i in items2)
-                {
-                    var a = i as Generated.Core.DataCenter.Metadata.Item.ItemSets;
-                    var ef = a.effects[1].values[0] as Generated.Core.DataCenter.Metadata.Effect.Instance.EffectInstanceDice;
-                    Extractor.Logger.LogWarning("ItemSets effect: " + ef + ", " + ef.diceNum);
-                    var s1 = JsonSerializer.Serialize<object>(a);
-                    var s2 = JsonSerializer.Serialize<object>(a.effects);
-                    var s3 = JsonSerializer.Serialize<object>(a.effects[1].values);
-                    var s4 = JsonSerializer.Serialize<object>(a.effects[1].values[0]);
-                    Extractor.Logger.LogWarning("Pano: " + s1);
-                    Extractor.Logger.LogWarning("Effets: " + s2);
-                    Extractor.Logger.LogWarning("Effets[1].values: " + s3);
-                    Extractor.Logger.LogWarning("Effets[1].values[0]: " + s4);
-                    break;
-                }
-            }
+            //if (itemType == typeof(Core.DataCenter.Metadata.Item.ItemSets))
+            //{
+            //    foreach (var i in items2)
+            //    {
+            //        var a = i as Generated.Core.DataCenter.Metadata.Item.ItemSets;
+            //        var ef = a.effects[1].values[0] as Generated.Core.DataCenter.Metadata.Effect.Instance.EffectInstanceDice;
+            //        Extractor.Logger.LogWarning("ItemSets effect: " + ef + ", " + ef.diceNum);
+            //        var s1 = JsonSerializer.Serialize<object>(a);
+            //        var s2 = JsonSerializer.Serialize<object>(a.effects);
+            //        var s3 = JsonSerializer.Serialize<object>(a.effects[1].values);
+            //        var s4 = JsonSerializer.Serialize<object>(a.effects[1].values[0]);
+            //        Extractor.Logger.LogWarning("Pano: " + s1);
+            //        Extractor.Logger.LogWarning("Effets: " + s2);
+            //        Extractor.Logger.LogWarning("Effets[1].values: " + s3);
+            //        Extractor.Logger.LogWarning("Effets[1].values[0]: " + s4);
+            //        break;
+            //    }
+            //}
             System.IO.Directory.CreateDirectory(path);
             //Extractor.Logger.LogInfo($"Created Directory. " + path);
 

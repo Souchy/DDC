@@ -156,7 +156,9 @@ public class ExtractRoots
                     var meth0 = rootTypeBase.GetMethod("GetObjects");
                     var objects = meth0.Invoke(v, []);
                     //Extractor.Logger.LogInfo($"Transforming root objects: " + objects + ": " + objects?.GetType().FullName);
-                    var items = objects.GetType().GetProperty("_items").GetValue(objects) as IEnumerable;
+                    var objectsvalues = objects.GetType().GetProperty("_items").GetValue(objects);
+                    var items = objectsvalues as IEnumerable;
+
                     var size = objects.GetType().GetProperty("_size").GetValue(objects);
                     //Extractor.Logger.LogInfo($"Transforming root items (" + size + "): " + items + ": " + items?.GetType().FullName);
                     var itemType = items.GetType().GenericTypeArguments[0];
@@ -168,6 +170,7 @@ public class ExtractRoots
                     var items2 = Activator.CreateInstance(genericType) as ICollection;
                     var methAdd = genericType.GetMethod("Add");
                     rootTypes.Add(itemType);
+
                     //return (items, items2, itemType, methAdd);
                     await ExtractRoot2(items, items2, itemType, methAdd);
                 }
@@ -206,11 +209,62 @@ public class ExtractRoots
                 if (item2 != null)
                     methAdd.Invoke(items2, [item2]);
             }
+            if(itemType == typeof(Core.DataCenter.Metadata.Item.ItemSets))
+            {
+                foreach (var i in items2)
+                {
+                    var a = i as Generated.Core.DataCenter.Metadata.Item.ItemSets;
+                    var ef = a.effects[1].values[0] as Generated.Core.DataCenter.Metadata.Effect.Instance.EffectInstanceDice;
+                    Extractor.Logger.LogWarning("ItemSets effect: " + ef + ", " + ef.diceNum);
+                    var s1 = JsonSerializer.Serialize<object>(a);
+                    var s2 = JsonSerializer.Serialize<object>(a.effects);
+                    var s3 = JsonSerializer.Serialize<object>(a.effects[1].values);
+                    var s4 = JsonSerializer.Serialize<object>(a.effects[1].values[0]);
+                    Extractor.Logger.LogWarning("Pano: " + s1);
+                    Extractor.Logger.LogWarning("Effets: " + s2);
+                    Extractor.Logger.LogWarning("Effets[1].values: " + s3);
+                    Extractor.Logger.LogWarning("Effets[1].values[0]: " + s4);
+                    break;
+                }
+            }
             System.IO.Directory.CreateDirectory(path);
             //Extractor.Logger.LogInfo($"Created Directory. " + path);
+
             await using FileStream stream = File.OpenWrite(path + "/" + itemType.Name + ".json");
             await JsonSerializer.SerializeAsync(stream, items2, ExtractorBehaviour.JsonSerializerOptions);
+            //await Utf8Json.JsonSerializer.SerializeAsync(stream, items2);
             stream.Flush();
+
+
+            //if (itemType == typeof(ItemSets))
+            //{
+            //    foreach (var i in items)
+            //    {
+            //        Extractor.Logger.LogInfo("---- Pano bouftou: ");
+            //        var json = Newtonsoft.Json.JsonConvert.SerializeObject((ItemSets) i, ExtractorBehaviour.NewtonsoftSettings);
+            //        Extractor.Logger.LogWarning(json);
+            //        Extractor.Logger.LogInfo("---- Pano bouftou ^^^");
+            //        break;
+            //    }
+            //}
+            //JsonSerializer
+            ////var json = Newtonsoft.Json.JsonConvert.SerializeObject(items2, ExtractorBehaviour.NewtonsoftSettings);
+            //using (var sw = new StreamWriter(path + "/" + itemType.Name + "-newton.json"))
+            //using (var writer = new Newtonsoft.Json.JsonTextWriter(sw))
+            //{
+            //ExtractorBehaviour.NewtonsoftSerializer.Serialize(writer, items2);
+            //    //serializer.Serialize(writer, product);
+            //    // {"ExpiryDate":new Date(1230375600000),"Price":0}
+            //}
+            //var json = Newtonsoft.Json.JsonConvert.SerializeObject((Il2CppSystem.Object) items, ExtractorBehaviour.NewtonsoftSettings);
+            // items2, ExtractorBehaviour.JsonSerializerOptions);
+            //new Newtonsoft.Json.JsonWriter()
+            //new Il2CppInterop
+            //new Il2CppSystem.IO.TextWriter().;
+
+
+
+
             Extractor.Logger.LogInfo($"Extracted ROOT of type {itemType.Name}. (" + count + ")");
         }
         catch (Exception ex)
@@ -220,43 +274,6 @@ public class ExtractRoots
 
     }
 
-    public static async Task ExtractRoot<T>(MetadataRoot<T> root0 = null)
-    {
-        try
-        {
-            string name = typeof(T).Name;
-            MetadataRoot<T> root = root0; // DataCenterModule.GetDataRoot<MetadataRoot<T>>()
-            var items = root.GetObjects()._items.Where(i => i != null).ToList(); //.Take(FAST_TAKES).ToList();
-            Extractor.Logger.LogInfo($"Extracting ROOT of type {name}. (" + items.Count + "/" + root.GetObjects().Count + ")");
-            int count = 0;
-            var items2 = items.Select(i =>
-            {
-                count++;
-                return ConvertType(i, count.ToString());
-            }).Where(n => n != null);
-
-            Extractor.Logger.LogInfo($"Converted ROOT types. " + items2.Count());
-
-            var folder = typeof(T).Namespace.Replace(".", "/") + "/";
-            string path = Path.Join(Extractor.OutputDirectory, folder);
-            System.IO.Directory.CreateDirectory(path);
-            Extractor.Logger.LogInfo($"Created Directory. " + path);
-            await using FileStream stream = File.OpenWrite(path + "/" + name + ".json");
-            await JsonSerializer.SerializeAsync(stream, items2, ExtractorBehaviour.JsonSerializerOptions);
-            stream.Flush();
-            //var json = JsonSerializer.Serialize(items2, JsonSerializerOptions);
-            //Extractor.Logger.LogMessage(json);
-            //File.WriteAllText(path + "/" + name + ".json", json);
-            //await File.WriteAllTextAsync(path + "/" + name + ".json", json);
-            Extractor.Logger.LogInfo($"Extracted ROOT of type {name} to {path}. (" + count + ")");
-        }
-        catch (Exception ex)
-        {
-            Extractor.Logger.LogError($"Exception extract ROOT (" + root0.ToString() + "): " + ex.Message + " -> " + ex.StackTrace);
-        }
-    }
-
-
     public static object? ConvertType(object original, string count = "")
     {
         try
@@ -264,7 +281,11 @@ public class ExtractRoots
             // Convert to implemented type
             if (original is Il2CppObjectBase b)
             {
-                original = SubtypeCasting.Converts(b);
+                original = SubtypeCasting.Converts(original, b);
+                //if(original is EffectInstanceDice d)
+                //{
+                //    Extractor.Logger.LogWarning("ei dicenum: " + original.GetType() + " : " + d.diceNum);
+                //}
             }
 
             var type1 = original.GetType();
@@ -430,8 +451,8 @@ public class ExtractRoots
                         Extractor.Logger.LogWarning($"Converting property list value is null in " + inst + "." + prop.Name + ": " + prop.PropertyType);
                     return null;
                 }
-                var genericType = GetCorrespondingType(prop.PropertyType);
-                if (genericType == prop.PropertyType)
+                var newGenericType = GetCorrespondingType(prop.PropertyType);
+                if (newGenericType == prop.PropertyType)
                 {
                     Extractor.Logger.LogInfo($"Converting property list type didn't change");
                     return val;
@@ -447,42 +468,58 @@ public class ExtractRoots
                     else if (val.GetType().Name.Contains("HashSet"))
                     {
                         // TODO HashSets unsupported for now. Only SpellScripts uses it and it's recursive anyway so we don't care.
-                        Extractor.Logger.LogError("HashSets not supported for now. " + prop.Name + ": " + val.GetType() + " vs " + genericType);
+                        Extractor.Logger.LogError("HashSets not supported for now. " + prop.Name + ": " + val.GetType() + " vs " + newGenericType);
                         return null;
                     }
                     else
                     {
                         list1 = val.GetType().GetProperty("_items")?.GetValue(val) as IEnumerable;
                     }
-                    var list2 = Activator.CreateInstance(genericType) as ICollection;
+                    //IEnumerable list2;
+                    ICollection list2 = Activator.CreateInstance(newGenericType) as ICollection;
                     //Extractor.Logger.LogInfo("ConvertingProperty list json2: " + val.ToString() + " to " + list2);
                     if (list1 == null)
                     {
                         Extractor.Logger.LogError($"Converting property list error - val: " + val + ", list1: " + list1 + ", list2: " + list2);
                         return val;
                     }
-                    var meth = genericType.GetMethod("Add");
+                    var meth = newGenericType.GetMethod("Add");
                     //var json = JsonSerializer.Serialize(val, options: JsonSerializerOptions);
 
-                    foreach (var item in list1)
+                    foreach (var i in list1)
                     {
+                        var item = i;
                         if (item is null) continue;
+                        //if (item is EffectInstance ei)
+                        //{
+                        //    var a = ei as Il2CppObjectBase;
+                        //    object dice = a.TryCast<EffectInstanceDice>();
+                        //    dice ??= a.TryCast<EffectInstanceMinMax>();
+                        //    dice ??= a.TryCast<EffectInstanceInteger>();
+                        //    if (dice != null) item = dice;
+                        //}
                         var item2 = ConvertType(item);
-                        if (item is EffectInstance)
-                        {
-
-                        }
+                        //if (item is EffectInstance ei)
+                        //{
+                        //    //var a = ei as Il2CppObjectBase;
+                        //    //object dice = a.TryCast<EffectInstanceDice>();
+                        //    //dice ??= a.TryCast<EffectInstanceMinMax>();
+                        //    //dice ??= a.TryCast<EffectInstanceInteger>();
+                        //    //if (dice != null) item = dice;
+                        //    Extractor.Logger.LogMessage("list item type: " + item.GetType() + " vs converted: " + item2.GetType());
+                        //}
                         // faut pas que ce soit un root type, ceux là sont déjà sérializer on their own.
                         // faut seulement les référencer par ID plutôt que par object reference, sinon on a une sérialization en boucle infinie
                         if (item2 != null && !rootTypes.Contains(item2.GetType()))
                             meth.Invoke(list2, [item2]);
+                            //list2.Add(item2);
                     }
                     return list2;
                 }
                 else
                 if (prop.PropertyType.GenericTypeArguments.Length == 2)
                 {
-                    Extractor.Logger.LogError("Error: unimplemented dictionary: " + inst.GetType().FullName + " -> " + prop.Name + ": " + genericType);
+                    Extractor.Logger.LogError("Error: unimplemented dictionary: " + inst.GetType().FullName + " -> " + prop.Name + ": " + newGenericType);
                     //var dic2 = Activator.CreateInstance(genericType) as IDictionary;
                     ////Dictionary<int, int> asd;
                     ////asd.Add(0, 0);

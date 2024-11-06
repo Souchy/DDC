@@ -47,9 +47,10 @@ internal static class SubtypeCasting
     //    return types.ToArray();
     //}
 
-    public static object Converts(Il2CppObjectBase b)
+    public static object Converts(object original, Il2CppObjectBase b)
     {
         object[] converts = [b];
+        //Extractor.Logger.LogInfo("type of b: " + b.GetType() + ", vs original: " + original.GetType());
 
         switch (b)
         {
@@ -59,11 +60,18 @@ internal static class SubtypeCasting
                     b.TryCast<EffectInstanceDate>(), b.TryCast<EffectInstanceDuration>(), b.TryCast<EffectInstanceMount>(),
                     b.TryCast<EffectInstanceLadder>(), b.TryCast<EffectInstanceCreature>(), b.TryCast<EffectInstanceString>(),
                 ];
+                //var ou = converts.FirstOrDefault(c => c != null);
+                //if(ou is EffectInstanceDice d)
+                //{
+                //    Extractor.Logger.LogWarning("ei dicenum: " +d.diceNum);
+                //}
                 break;
             case Items:
                 converts = [
                     b.TryCast<Weapons>(),
                 ];
+                //var wep = converts.FirstOrDefault(c => c != null);
+                //if(wep != null) Extractor.Logger.LogWarning("type of b: " + b.GetType() + ", vs wep: " + wep?.GetType());
                 break;
             case Bonuses:
                 converts = [
@@ -109,9 +117,12 @@ internal static class SubtypeCasting
                 break;
             case SocialTags:
                 converts = [b.TryCast<AllianceTags>(), b.TryCast<GuildTags>(),];
+                //Extractor.Logger.LogWarning("SocialTags: " + converts.FirstOrDefault(c => c != null));
                 break;
             case SocialTagsTypes:
                 converts = [b.TryCast<AllianceTagsTypes>(), b.TryCast<GuildTagsTypes>(),];
+                break;
+            default:
                 break;
         }
         return converts.FirstOrDefault(o => o != null) ?? b;

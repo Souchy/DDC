@@ -41,6 +41,7 @@ using static ers;
 using File = System.IO.File;
 using FileStream = System.IO.FileStream;
 using Path = System.IO.Path;
+using Newtonsoft.Json;
 
 namespace DDC.Extractor;
 
@@ -52,6 +53,26 @@ public class ExtractorBehaviour : MonoBehaviour
         IncludeFields = false,
         WriteIndented = true,
         NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals,
+        IgnoreReadOnlyProperties = false,
+    };
+
+    public static readonly JsonSerializerSettings NewtonsoftSettings = new()
+    {
+        TypeNameHandling = TypeNameHandling.Auto,
+        NullValueHandling = NullValueHandling.Include,
+        MissingMemberHandling = MissingMemberHandling.Ignore,
+        Formatting = Formatting.Indented,
+        ObjectCreationHandling = ObjectCreationHandling.Replace,
+        FloatFormatHandling = FloatFormatHandling.String,
+    };
+    public static readonly Newtonsoft.Json.JsonSerializer NewtonsoftSerializer = new Newtonsoft.Json.JsonSerializer()
+    {
+        TypeNameHandling = TypeNameHandling.Auto,
+        NullValueHandling = NullValueHandling.Include,
+        MissingMemberHandling = MissingMemberHandling.Ignore,
+        Formatting = Formatting.Indented,
+        ObjectCreationHandling = ObjectCreationHandling.Replace,
+        FloatFormatHandling = FloatFormatHandling.String,
     };
 
     void Start() => StartCoroutine(StartCoroutine().WrapToIl2Cpp());
@@ -66,7 +87,7 @@ public class ExtractorBehaviour : MonoBehaviour
         // remove static fields from .cs
         Extractor.Logger.LogInfo("Start extracting data...");
 
-        if(false)
+        if (false)
         {
 
             Prototyping.TestItemsEffects();
@@ -119,7 +140,7 @@ public class ExtractorBehaviour : MonoBehaviour
         System.IO.Directory.CreateDirectory(folder);
 
         await using FileStream stream = File.OpenWrite(path);
-        await JsonSerializer.SerializeAsync(stream, localizationTable, JsonSerializerOptions);
+        await System.Text.Json.JsonSerializer.SerializeAsync(stream, localizationTable, JsonSerializerOptions);
         stream.Flush();
 
         Extractor.Logger.LogInfo($"Extracted locale {table.m_header.languageCode} to {path}.");

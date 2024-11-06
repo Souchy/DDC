@@ -122,6 +122,15 @@ public class ExtractModelTypes
         }
     }
 
+    static string typeToJsonDerivedString(Type type)
+    {
+        var types = type.Assembly.GetTypes().Where(t => t.BaseType == type);
+        var strings = types.Select(t => $"[System.Text.Json.Serialization.JsonDerivedType(typeof({t.Name}))]");
+        var str = string.Join("\n", strings);
+        ModelExtractor.Logger.LogInfo($"" + str);
+        return str;
+    }
+
     static string typeToEnumString(Type type)
     {
         try
@@ -154,7 +163,9 @@ public class ExtractModelTypes
         {
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("using UnityEngine;");
+            sb.AppendLine();
             sb.AppendLine("namespace Generated." + type.Namespace + ";");
+            sb.AppendLine();
             sb.Append($"public struct {type.Name} ");
             sb.Append('{');
             sb.AppendLine();
@@ -206,6 +217,9 @@ public class ExtractModelTypes
 
             sb.AppendLine();
             sb.AppendLine("namespace Generated." + type.Namespace + ";");
+            sb.AppendLine();
+
+            //sb.AppendLine(typeToJsonDerivedString(type));
 
             sb.Append($"public class {type.Name} ");
             if (type.BaseType != null && (type.BaseType.FullName.StartsWith("Core.DataCenter") || type.BaseType.FullName.StartsWith("Metadata")))

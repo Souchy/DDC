@@ -24,7 +24,7 @@ internal class Program
 
         var tasks = Enumerable.Empty<Task>();
 
-        if(!opts.DebugLocalData.HasValue || !opts.DebugLocalData.Value)
+        if (!opts.DebugLocalData.HasValue || !opts.DebugLocalData.Value)
         {
             // Extract assets asynchronously
             if (opts.AssetStudioPath != null)
@@ -140,7 +140,6 @@ internal class Program
         var pluginsFolder = Path.Combine(dofusFolder.FullName, "BepInEx", "plugins");
         var bin = Path.Combine(ddcFolder.FullName, projectName, "bin/Release/net6.0/DDC*.dll");
         await Run($"copy {bin} {pluginsFolder}");
-        //CopyDirectory(pluginsFolder, new DirectoryInfo(Path.Combine(ddcFolder.FullName, projectName, "bin/Release/net6.0")));
     }
 
     static void CreateBepInConfigFolder()

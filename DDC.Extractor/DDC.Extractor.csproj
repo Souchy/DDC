@@ -68,6 +68,9 @@
 		<Reference Include="Il2CppSystem.Xml.Linq">
 			<HintPath>..\Interop\Il2CppSystem.Xml.Linq.dll</HintPath>
 		</Reference>
+		<Reference Include="Newtonsoft.Json">
+		  <HintPath>..\Interop\Newtonsoft.Json.dll</HintPath>
+		</Reference>
 		<Reference Include="UnityEngine">
 			<HintPath>..\Interop\UnityEngine.dll</HintPath>
 		</Reference>
@@ -103,17 +106,5 @@
 	<ItemGroup>
 		<ProjectReference Include="..\DDC\DDC.csproj" />
 	</ItemGroup>
-
-	<!--
-	<Target Name="RemovePlugins" AfterTargets="AfterBuild" Condition="'$(Configuration)' == 'Debug'">
-		<Exec Command="rm C:\Users\Blank\AppData\Local\Ankama\Dofus-beta\BepInEx\plugins\DDC.ModelExtractor.dll" />
-	</Target>
-	-->
-	<Target Name="CopyDlls" AfterTargets="AfterBuild" Condition="'$(Configuration)' == 'Debug'">
-		<Copy SourceFiles="$(OutDir)\DDC.dll;$(OutDir)\DDC.Extractor.dll" DestinationFolder="C:\Users\Blank\AppData\Local\Ankama\Dofus-beta\BepInEx\plugins" />
-	</Target>
-	<Target Name="PostBuildProcessing" AfterTargets="CopyDlls" Condition="'$(Configuration)' == 'Debug'">
-		<Exec Command="C:\Users\Blank\AppData\Local\Ankama\Dofus-beta\Dofus.exe" />
-	</Target>
 
 </Project>

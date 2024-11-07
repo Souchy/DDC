@@ -61,11 +61,6 @@ public class ExtractorBehaviour : MonoBehaviour
     static IEnumerator StartCoroutine()
     {
         yield return Wait(1);
-        // missing targetMask dans effectinstance (enemis,alliés pour zones)
-        // EffectInstance.zoneDescr converting
-        // enum value converting
-        // remove properties that dont have fields from .cs
-        // remove static fields from .cs
         Extractor.Logger.LogInfo("Start extracting data...");
 
         if (false)

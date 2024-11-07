@@ -63,7 +63,7 @@ public class ExtractRoots
             }
             catch (Exception ex)
             {
-                Extractor.Logger.LogWarning("Exception asdf (" + prop.Name + "): " + ex.Message);
+                Extractor.Logger.LogWarning("Exception ExtractAll (" + prop.Name + "): " + ex.Message);
                 return null;
             }
         })
@@ -84,7 +84,7 @@ public class ExtractRoots
         }
         catch (Exception ex)
         {
-            Extractor.Logger.LogInfo("Exception asdf overall: " + ex.Message + " -> " + ex.StackTrace);
+            Extractor.Logger.LogInfo("Exception ExtractAll overall: " + ex.Message + " -> " + ex.StackTrace);
         }
     }
 
@@ -117,7 +117,7 @@ public class ExtractRoots
         }
         catch (Exception ex)
         {
-            Extractor.Logger.LogWarning("Exception asdf prop (" + v.GetType().Name + "): " + ex.Message);
+            Extractor.Logger.LogWarning("Exception ExtractRootStep1 prop (" + v.GetType().Name + "): " + ex.Message);
             //continue;
         }
     }
@@ -144,17 +144,33 @@ public class ExtractRoots
                     methAdd.Invoke(items2, [item2]);
             }
 
-            await using FileStream stream = File.OpenWrite(path + "/" + itemType.Name + ".json");
-            await JsonSerializer.SerializeAsync<object>(stream, items2, ExtractorBehaviour.JsonSerializerOptions);
-            stream.Flush();
+            //await using FileStream stream = File.OpenWrite($"{path}/{itemType.Name}.json");
+            //await JsonSerializer.SerializeAsync<object>(stream, items2, ExtractorBehaviour.JsonSerializerOptions);
+            //stream.Flush();
 
-            Extractor.Logger.LogInfo($"Extracted ROOT of type {itemType.Name}. (" + count + ")");
+            var json = JsonSerializer.Serialize(items2, ExtractorBehaviour.JsonSerializerOptions);
+            byte[] info = new UTF8Encoding(true).GetBytes(json);
+
+            const int max_size = 60 * 1000 * 1000;
+            int file_id = 0;
+            int offset = 0;
+            int remaining = info.Length;
+            do {
+                int length = Math.Min(remaining, max_size);
+                await using FileStream stream = File.OpenWrite($"{path}/{itemType.Name}-{file_id}.json");
+                await stream.WriteAsync(info.AsMemory(offset, length));
+                await stream.FlushAsync();
+                offset += length;
+                remaining = info.Length - offset;
+                file_id++;
+            } while(remaining > 0);
+
+            Extractor.Logger.LogInfo($"Extracted ROOT of type {itemType.Name}. ({count}), bytes: {info.Length}");
         }
         catch (Exception ex)
         {
-            Extractor.Logger.LogError($"Exception extract ROOT (" + itemType.FullName + "): " + ex.Message + " -> " + ex.StackTrace);
+            Extractor.Logger.LogError($"Exception ExtractRootStep2 ROOT (" + itemType.FullName + "): " + ex.Message + " -> " + ex.StackTrace);
         }
-
     }
 
 }

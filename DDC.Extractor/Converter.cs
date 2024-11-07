@@ -218,7 +218,6 @@ internal static class Converter
             {
                 list1 = val.GetType().GetProperty("_items")?.GetValue(val) as IEnumerable;
             }
-            //IEnumerable list2;
             ICollection list2 = Activator.CreateInstance(newGenericType) as ICollection;
             //Extractor.Logger.LogInfo("ConvertingProperty list json2: " + val.ToString() + " to " + list2);
             if (list1 == null)
@@ -227,43 +226,17 @@ internal static class Converter
                 return val;
             }
             var meth = newGenericType.GetMethod("Add");
-            //var json = JsonSerializer.Serialize(val, options: JsonSerializerOptions);
-
-            //List<string> strList = new();
 
             foreach (var i in list1)
             {
-                //var str = JsonSerializer.Serialize(i, ExtractorBehaviour.JsonSerializerOptions);
-                //strList.Add(str);
-
                 var item = i;
                 if (item is null) continue;
-                //if (item is EffectInstance ei)
-                //{
-                //    var a = ei as Il2CppObjectBase;
-                //    object dice = a.TryCast<EffectInstanceDice>();
-                //    dice ??= a.TryCast<EffectInstanceMinMax>();
-                //    dice ??= a.TryCast<EffectInstanceInteger>();
-                //    if (dice != null) item = dice;
-                //}
                 var item2 = ConvertType(item);
-                //if (item is EffectInstance ei)
-                //{
-                //    //var a = ei as Il2CppObjectBase;
-                //    //object dice = a.TryCast<EffectInstanceDice>();
-                //    //dice ??= a.TryCast<EffectInstanceMinMax>();
-                //    //dice ??= a.TryCast<EffectInstanceInteger>();
-                //    //if (dice != null) item = dice;
-                //    Extractor.Logger.LogMessage("list item type: " + item.GetType() + " vs converted: " + item2.GetType());
-                //}
                 // faut pas que ce soit un root type, ceux là sont déjà sérializer on their own.
                 // faut seulement les référencer par ID plutôt que par object reference, sinon on a une sérialization en boucle infinie
                 if (item2 != null && !ExtractRoots.rootTypes.Contains(item2.GetType()))
                     meth.Invoke(list2, [item2]);
-                //list2.Add(item2);
             }
-
-            //string json = $"[{string.Join(", ", strList)}]";
 
             return list2;
         }
@@ -371,19 +344,6 @@ internal static class Converter
                 Extractor.Logger.LogWarning($"Skip property: no static field");
             return true;
         }
-
-        //if (dangerousProperties.Contains(prop.Name))
-        //    return true;
-        //if (inst.GetType().GetProperty("m_" + prop.Name) != null)
-        //{
-        //    //Extractor.Logger.LogInfo("ConvertingType skip prop by _m: " + prop.Name);
-        //    return true;
-        //}
-        //if (inst.GetType().GetProperty(prop.Name + "Id") != null || inst.GetType().GetProperty(prop.Name + "Ids") != null)
-        //{
-        //    //Extractor.Logger.LogInfo("ConvertingType skip prop by Id: " + prop.Name);
-        //    return true;
-        //}
         if (prop.PropertyType.Name.Contains("MemoizedValues") || prop.Name.ToLower().Contains("memoized"))
         {
             if (ExtractRoots.debug)

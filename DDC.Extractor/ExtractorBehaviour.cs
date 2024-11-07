@@ -56,25 +56,6 @@ public class ExtractorBehaviour : MonoBehaviour
         IgnoreReadOnlyProperties = false,
     };
 
-    public static readonly JsonSerializerSettings NewtonsoftSettings = new()
-    {
-        TypeNameHandling = TypeNameHandling.Auto,
-        NullValueHandling = NullValueHandling.Include,
-        MissingMemberHandling = MissingMemberHandling.Ignore,
-        Formatting = Formatting.Indented,
-        ObjectCreationHandling = ObjectCreationHandling.Replace,
-        FloatFormatHandling = FloatFormatHandling.String,
-    };
-    public static readonly Newtonsoft.Json.JsonSerializer NewtonsoftSerializer = new Newtonsoft.Json.JsonSerializer()
-    {
-        TypeNameHandling = TypeNameHandling.Auto,
-        NullValueHandling = NullValueHandling.Include,
-        MissingMemberHandling = MissingMemberHandling.Ignore,
-        Formatting = Formatting.Indented,
-        ObjectCreationHandling = ObjectCreationHandling.Replace,
-        FloatFormatHandling = FloatFormatHandling.String,
-    };
-
     void Start() => StartCoroutine(StartCoroutine().WrapToIl2Cpp());
 
     static IEnumerator StartCoroutine()
@@ -97,14 +78,7 @@ public class ExtractorBehaviour : MonoBehaviour
         else
         if (true)
         {
-            ExtractRoots.rootTypes.Add(typeof(Idols));
-            ExtractRoots.rootTypes.Add(typeof(IdolsPresetIcons));
-            ExtractRoots.rootTypes.Add(typeof(SocialTagsTypes));
-            ExtractRoots.rootTypes.Add(typeof(SkinPositions));
-
-            //var roots = ExtractRoots.FindRoots();
-            //yield return WaitForCompletion(ExtractRoots.GetAllRoots(roots));
-            yield return WaitForCompletion(ExtractRoots.asdf());
+            yield return WaitForCompletion(ExtractRoots.ExtractAll());
 
             yield return WaitForCompletion(ExtractLocale("i18n/de.i18n.json", "Dofus_Data/StreamingAssets/Content/I18n/de.bin"));
             yield return WaitForCompletion(ExtractLocale("i18n/en.i18n.json", "Dofus_Data/StreamingAssets/Content/I18n/en.bin"));

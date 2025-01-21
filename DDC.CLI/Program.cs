@@ -1,5 +1,7 @@
 ﻿using CommandLine;
 using System.Diagnostics;
+using System.IO;
+using System.Text.Json;
 
 namespace DDC.CLI;
 
@@ -16,24 +18,53 @@ internal class Program
 
     static async Task Main(string[] args) => await Parser.Default.ParseArguments<Options>(args).WithParsedAsync(RunOptions);
 
+    static string[] GameNames = [
+        "dofus",
+        "flyn",
+        "waven",
+        "retro",
+        "supernanoblaster",
+        "krosmaga",
+        "onemoregate",
+        "wakfu"
+    ];
+    static string[] Platforms = ["windows", "darwin", "linux"];
+    static string[] DofusBranches = ["beta", "dofus3", "main"]; // main is 2.73
+    
+
+    static async Task<string> GetLatestVersion(string game, string platform, string branch)
+    {
+        HttpClient client = new();
+        var json = await client.GetStringAsync("https://cytrus.cdn.ankama.com/cytrus.json");
+        var doc = JsonDocument.Parse(json);
+        var version = doc.RootElement.GetProperty("games").GetProperty(game).GetProperty("platforms").GetProperty(platform).GetProperty(branch).GetString();
+        if(version == null)
+            throw new Exception("Version not found");
+        return version.Split("_").Last(); // remove the '6.0_'
+    }
+
     static async Task RunOptions(Options opts)
     {
         ddcFolder = new DirectoryInfo(opts.DDCFolderPath);
         dofusFolder = new DirectoryInfo(opts.DofusFolderPath);
         outputFolder = new DirectoryInfo(opts.OutputPath ?? Path.Combine(opts.DofusFolderPath, "extracted"));
 
+        // Save version
+        var version = await GetLatestVersion("dofus", "windows", opts.Branch);
+        await File.WriteAllTextAsync(Path.Combine(outputFolder.FullName, "VERSION"), version);
+
         var tasks = Enumerable.Empty<Task>();
 
+        // Extract assets asynchronously
+        if (opts.AssetStudioPath != null)
+        {
+            assetFolder = new DirectoryInfo(Path.Join(dofusFolder.FullName, "Dofus_Data/StreamingAssets/Content/Picto"));
+            var bundles = assetFolder.GetFiles("*.bundle", SearchOption.AllDirectories);
+            assetStudioPath = opts.AssetStudioPath;
+            tasks = bundles.Select(b => ExtractAssetBundle(b.Directory!.Name, b.Name));
+        }
         if (!opts.DebugLocalData.HasValue || !opts.DebugLocalData.Value)
         {
-            // Extract assets asynchronously
-            if (opts.AssetStudioPath != null)
-            {
-                assetFolder = new DirectoryInfo(Path.Join(dofusFolder.FullName, "Dofus_Data/StreamingAssets/Content/Picto"));
-                var bundles = assetFolder.GetFiles("*.bundle", SearchOption.AllDirectories);
-                assetStudioPath = opts.AssetStudioPath;
-                tasks = bundles.Select(b => ExtractAssetBundle(b.Directory!.Name, b.Name));
-            }
             //Install Bepin
             if (opts.BepinFolderPath != null)
             {
@@ -191,7 +222,7 @@ internal class Program
         var sprites = new DirectoryInfo(Path.Combine(output, "Sprite"));
         foreach (var file in sprites.GetFiles())
         {
-            file.MoveTo(Path.Combine(output, file.Name));
+            file.MoveTo(Path.Combine(output, file.Name), true);
         }
         try
         {

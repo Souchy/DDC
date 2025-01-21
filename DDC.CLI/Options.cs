@@ -29,4 +29,7 @@ internal class Options
     [Option('d', "debuglocaldata", Required = false, HelpText = "Debug local data (removes bepin setup, assets and model extractiong)")]
     public bool? DebugLocalData { get; set; }
 
+    [Option('v', "branch", Required = true, HelpText = "Dofus branch is [beta, dofus3, main], where beta and dofus3 are current versions and main is 2.73")]
+    public string Branch { get; set; }
+
 }

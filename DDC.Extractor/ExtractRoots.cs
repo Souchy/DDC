@@ -151,7 +151,7 @@ public class ExtractRoots
             var json = JsonSerializer.Serialize(items2, ExtractorBehaviour.JsonSerializerOptions);
             byte[] info = new UTF8Encoding(true).GetBytes(json);
 
-            const int max_size = 60 * 1000 * 1000;
+            const int max_size = 20 * 1000 * 1000;
             int file_id = 0;
             int offset = 0;
             int remaining = info.Length;

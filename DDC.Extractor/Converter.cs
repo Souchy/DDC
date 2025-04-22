@@ -203,7 +203,8 @@ internal static class Converter
         if (prop.PropertyType.GenericTypeArguments.Length == 1)
         {
             IEnumerable list1 = null;
-            //Extractor.Logger.LogInfo("ConvertingProperty list json1: " + val.GetType() + " vs " + genericType);
+            if(ExtractRoots.debug)
+                Extractor.Logger.LogInfo("ConvertingProperty list json1: " + val.GetType() + " vs " + newGenericType);
             if (val is IEnumerable)
             {
                 list1 = val as IEnumerable;
@@ -327,7 +328,18 @@ internal static class Converter
                 Extractor.Logger.LogWarning($"Skip property: IL2.Object");
             return true;
         }
-
+        if(prop.PropertyType.Name.Contains("int*") || prop.PropertyType.Name.Contains("System.IntPtr"))
+        {
+            if (ExtractRoots.debug)
+                Extractor.Logger.LogInfo($"Skip property: System.IntPtr");
+            return true;
+        }
+        if (prop.Name.EndsWith("Lock"))
+        {
+            if (ExtractRoots.debug)
+                Extractor.Logger.LogWarning($"Skip property: {prop.Name} ends with Lock");
+            return true;
+        }
         // Skip properties that dont have a corresponding field
         Type baseType = original.GetType();
         bool foundField = false;

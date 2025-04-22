@@ -73,7 +73,21 @@ public class ExtractorBehaviour : MonoBehaviour
         else
         if (true)
         {
-            yield return WaitForCompletion(ExtractRoots.ExtractAll());
+            //yield return WaitForCompletion(ExtractRoots.ExtractAll());
+
+            var roots = ExtractRoots.getRoots();
+            Extractor.Logger.LogInfo($"Extracting ROOTs (" + roots.Count() + ") =================");
+            Extractor.Logger.LogInfo(string.Join(", ", roots.Select(p => p.GetType().Name)));
+            string path = Path.Join(Extractor.OutputDirectory);
+            if (System.IO.Directory.Exists(path))
+                System.IO.Directory.Delete(path, true);
+            yield return Wait(5);
+
+            foreach(var root in roots)
+            {
+                yield return WaitForCompletion(ExtractRoots.ExtractRootStep1(root));
+            }
+            Extractor.Logger.LogInfo($"Extracting ROOTs DONE =================");
 
             yield return WaitForCompletion(ExtractLocale("i18n/de.i18n.json", "Dofus_Data/StreamingAssets/Content/I18n/de.bin"));
             yield return WaitForCompletion(ExtractLocale("i18n/en.i18n.json", "Dofus_Data/StreamingAssets/Content/I18n/en.bin"));

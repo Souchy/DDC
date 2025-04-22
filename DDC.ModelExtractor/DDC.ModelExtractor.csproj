@@ -69,6 +69,9 @@
 		<Reference Include="Il2CppSystem.Xml.Linq">
 			<HintPath>..\Interop\Il2CppSystem.Xml.Linq.dll</HintPath>
 		</Reference>
+		<Reference Include="Newtonsoft.Json">
+		  <HintPath>..\Interop\Newtonsoft.Json.dll</HintPath>
+		</Reference>
 		<Reference Include="UnityEngine">
 			<HintPath>..\Interop\UnityEngine.dll</HintPath>
 		</Reference>

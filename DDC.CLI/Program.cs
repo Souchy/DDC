@@ -58,9 +58,9 @@ internal class Program
         // Extract assets asynchronously
         if (opts.AssetStudioPath != null)
         {
+            assetStudioPath = opts.AssetStudioPath;
             assetFolder = new DirectoryInfo(Path.Join(dofusFolder.FullName, "Dofus_Data/StreamingAssets/Content/Picto"));
             var bundles = assetFolder.GetFiles("*.bundle", SearchOption.AllDirectories);
-            assetStudioPath = opts.AssetStudioPath;
             tasks = bundles.Select(b => ExtractAssetBundle(b.Directory!.Name, b.Name));
         }
         if (!opts.DebugLocalData.HasValue || !opts.DebugLocalData.Value)
@@ -160,6 +160,7 @@ internal class Program
         //Thread.Sleep(1000);
         var pluginsFolder = Path.Combine(dofusFolder.FullName, "BepInEx", "plugins");
         var dir = new DirectoryInfo(pluginsFolder);
+        if(!dir.Exists) return;
         foreach (var plugin in dir.EnumerateFiles())
         {
             plugin.DeleteSafe();
@@ -170,6 +171,7 @@ internal class Program
     {
         var pluginsFolder = Path.Combine(dofusFolder.FullName, "BepInEx", "plugins");
         var bin = Path.Combine(ddcFolder.FullName, projectName, "bin/Release/net6.0/DDC*.dll");
+        Directory.CreateDirectory(pluginsFolder);
         await Run($"copy {bin} {pluginsFolder}");
     }
 
@@ -202,7 +204,7 @@ internal class Program
             var path = Path.Combine(destDir, file.Name);
             if (File.Exists(path))
                 return;
-            file.CopyTo(path);
+            file.CopyTo(path, true);
         }
     }
 

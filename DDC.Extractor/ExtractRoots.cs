@@ -44,7 +44,32 @@ public class ExtractRoots
         typeof(Idols), typeof(IdolsPresetIcons), typeof(SocialTagsTypes), typeof(SkinPositions),
     ];
     public const int FAST_TAKES = 5;
-    public const bool debug = false;
+    public static bool debug = false;
+
+    public static IEnumerable<object> getRoots()
+    {
+        // Roots are properties of DataCenterModule
+        var roots = typeof(DataCenterModule).GetProperties().Where(p => p.Name.EndsWith("Root")) // && !p.Name.StartsWith("s_"));
+        .Select(prop =>
+        {
+            try
+            {
+                if (dangerousTypes.Select(t => t.Name.ToLower() + "root").Contains(prop.Name.ToLower()))
+                {
+                    Extractor.Logger.LogMessage($"Ignoring root: " + prop.Name);
+                    return null;
+                }
+                return prop.GetValue(typeof(DataCenterModule));
+            }
+            catch (Exception ex)
+            {
+                Extractor.Logger.LogWarning("Exception ExtractAll (" + prop.Name + "): " + ex.Message);
+                return null;
+            }
+        })
+        .Where(r => r != null);
+        return roots;
+    }
 
     public static async Task ExtractAll()
     {
@@ -68,7 +93,6 @@ public class ExtractRoots
             }
         })
         .Where(r => r != null);
-
         try
         {
             Extractor.Logger.LogInfo($"Extracting ROOTs (" + roots.Count() + ") =================");
@@ -88,7 +112,7 @@ public class ExtractRoots
         }
     }
 
-    private static async Task ExtractRootStep1(object v)
+    public static async Task ExtractRootStep1(object v)
     {
         try
         {
@@ -105,6 +129,7 @@ public class ExtractRoots
             var itemType = items.GetType().GenericTypeArguments[0];
             if (dangerousTypes.Contains(itemType))
                 return;
+            //ExtractRoots.debug = itemType.Name == "Items";
             //Extractor.Logger.LogInfo($"Transforming root list type:  {itemType.Name}"); // + items.Count);
             var genericType = Converter.GetCorrespondingType(items.GetType());
             //Extractor.Logger.LogInfo($"Transforming root new list type: " + genericType.FullName);

@@ -48,6 +48,7 @@ public class ExtractModelTypes
                 continue;
             //ModelExtractor.Logger.LogInfo(t.FullName);
 
+            polymorphic = false;
             await WriteCSharp(t);
             polymorphic = true;
             await WriteCSharp(t);
@@ -58,16 +59,16 @@ public class ExtractModelTypes
 
     static async Task WriteCSharp(Type type)
     {
-        var folderName = type.Namespace.Replace(".", "/");
-        var root = polymorphic ? ModelExtractor.OutputDirectory.Replace("Generated", RootFolder) : ModelExtractor.OutputDirectory;
-        var folderPath = Path.Combine(root, folderName);
-        Directory.CreateDirectory(folderPath);
-        string filePath = $"{folderPath}/{type.Name}.cs";
-        ModelExtractor.Logger.LogInfo(filePath);
-
-        var str = "";
         try
         {
+            var folderName = type.Namespace.Replace(".", "/");
+            var root = polymorphic ? ModelExtractor.OutputDirectory.Replace("Generated", RootFolder) : ModelExtractor.OutputDirectory;
+            var folderPath = Path.Combine(root, folderName);
+            Directory.CreateDirectory(folderPath);
+            string filePath = $"{folderPath}/{type.Name}.cs";
+            ModelExtractor.Logger.LogInfo(filePath);
+
+            var str = "";
             if (type.IsEnum)
             {
                 str = typeToEnumString(type);
@@ -179,10 +180,10 @@ public class ExtractModelTypes
         //    sb.AppendLine("using Metadata.Appearance;");
         if (type.FullName == "Core.DataCenter.Metadata.Sound.SoundBones")
             sb.AppendLine("using static Core.DataCenter.Metadata.Sound.SoundBones;");
-        if (type.Name == "SoundBonesDictionary")
-        {
-            return null;
-        }
+        //if (type.Name == "SoundBonesDictionary")
+        //{
+        //    return null;
+        //}
         sb.AppendLine();
         sb.AppendLine($"namespace {folder}." + type.Namespace + ";");
         sb.AppendLine();

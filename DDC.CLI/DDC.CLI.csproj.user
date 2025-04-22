@@ -4,6 +4,6 @@
     <DebuggerFlavor>ProjectDebugger</DebuggerFlavor>
   </PropertyGroup>
   <PropertyGroup>
-    <ActiveDebugProfile>Dofus3</ActiveDebugProfile>
+    <ActiveDebugProfile>DofusBeta</ActiveDebugProfile>
   </PropertyGroup>
 </Project>

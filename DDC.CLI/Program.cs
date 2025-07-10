@@ -30,7 +30,7 @@ internal class Program
     ];
     static string[] Platforms = ["windows", "darwin", "linux"];
     static string[] DofusBranches = ["beta", "dofus3", "main"]; // main is 2.73
-    
+
 
     static async Task<string> GetLatestVersion(string game, string platform, string branch)
     {
@@ -38,7 +38,7 @@ internal class Program
         var json = await client.GetStringAsync("https://cytrus.cdn.ankama.com/cytrus.json");
         var doc = JsonDocument.Parse(json);
         var version = doc.RootElement.GetProperty("games").GetProperty(game).GetProperty("platforms").GetProperty(platform).GetProperty(branch).GetString();
-        if(version == null)
+        if (version == null)
             throw new Exception("Version not found");
         return version.Split("_").Last(); // remove the '6.0_'
     }
@@ -62,7 +62,7 @@ internal class Program
             assetFolder = new DirectoryInfo(Path.Join(dofusFolder.FullName, "Dofus_Data/StreamingAssets/Content/Picto"));
             var bundles = assetFolder.GetFiles("*.bundle", SearchOption.AllDirectories);
             tasks = bundles.Select(b => ExtractAssetBundle(b.Directory!.Name, b.Name));
-        }
+        } 
         if (!opts.DebugLocalData.HasValue || !opts.DebugLocalData.Value)
         {
             //Install Bepin
@@ -160,7 +160,7 @@ internal class Program
         //Thread.Sleep(1000);
         var pluginsFolder = Path.Combine(dofusFolder.FullName, "BepInEx", "plugins");
         var dir = new DirectoryInfo(pluginsFolder);
-        if(!dir.Exists) return;
+        if (!dir.Exists) return;
         foreach (var plugin in dir.EnumerateFiles())
         {
             plugin.DeleteSafe();

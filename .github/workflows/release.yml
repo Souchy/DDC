@@ -96,8 +96,23 @@ jobs:
         # need AssetRipper to extract all bundles to dofus_path/extracted
         # need Alfred to sanitize json and assets
         # need to push to AnkaDB (full?) and DofusDB (sanitized?)
+
+      # Add this step before the "Run AssetRipper" step
+
+      - name: Download AssetRipper latest release
+        run: |
+          $AssetRipperUrl = "https://github.com/Souchy/AssetRipper/releases/download/2386364/AssetRipper.CLI.exe"
+          Invoke-WebRequest -Uri $AssetRipperUrl -OutFile "${{ steps.read_dofus_version.outputs.dofus_path }}/AssetRipper.CLI.exe"
+
       - name: Run AssetRipper
-        run: dotnet run --project AssetRipper/Source/AssetRipper.CLI.csproj --configuration Release --no-restore -i ${{ steps.read_dofus_version.outputs.dofus_path }}/StreamingAssets/Content/Picto -o ${{ steps.read_dofus_version.outputs.dofus_path }}/extracted
+        run: |
+          "${{ steps.read_dofus_version.outputs.dofus_path }}/AssetRipper.CLI.exe" -i ${{ steps.read_dofus_version.outputs.dofus_path }}/StreamingAssets/Content/Picto -o ${{ steps.read_dofus_version.outputs.dofus_path }}/extracted
+
+      # - name: Run AssetRipper
+      #   run: dotnet run --project AssetRipper/Source/AssetRipper.CLI.csproj --configuration Release --no-restore -i ${{ steps.read_dofus_version.outputs.dofus_path }}/StreamingAssets/Content/Picto -o ${{ steps.read_dofus_version.outputs.dofus_path }}/extracted
+
+      - name: Check
+        run: ls ${{ steps.read_dofus_version.outputs.dofus_path }}/extracted
 
       - name: Run Alfred
         run: npm run sanitize

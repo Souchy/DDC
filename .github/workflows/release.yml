@@ -10,10 +10,9 @@ on:
   workflow_dispatch:
 
 jobs:  
-  extract:
-    name: Extract game data
+  setup:
+    name: Setup bepin + DDC
     runs-on: windows-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -30,16 +29,22 @@ jobs:
           echo @dofus-batteries-included:registry=https://npm.pkg.github.com > ~/.npmrc
           echo //npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }} >> ~/.npmrc
 
+      # - name: Download AssetStudio fork
+      #   run: curl https://nightly.link/voidn0n/Studio/actions/artifacts/1954357318.zip -o AssetStudio.zip
+
+      # - name: Extract AssetStudio
+      #   run: 7z x AssetStudio.zip -o"${{ github.workspace }}/studio" -aoa
+
       - name: Install Cytrus v6
         run: npm i @dofus-batteries-included/cytrus-v6 -g
 
-      - name: Read current game version
+      - name: Read current game version  # Use beta for now
         id: read_dofus_version
         run: |
           $CytrusGameVersion=$(cytrus-v6 version -g dofus -b)
           $GameVersion=$CytrusGameVersion.Split("_")[1]
           echo "dofus_version=$GameVersion" >> $Env:GITHUB_OUTPUT
-          echo "dofus_path=dofus-beta-$GameVersion" >> $Env:GITHUB_OUTPUT
+          echo "dofus_path=dofus-beta-$GameVersion" >> $Env:GITHUB_OUTPUT 
 
       - name: Restore game files
         id: restore_game_files
@@ -80,26 +85,39 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore
 
-      - name: Build DDC.Extractor plugin
-        run: dotnet build DDC.Extractor/DDC.Extractor.csproj --configuration Release --no-restore
+      # CLI
+      - name: Run CLI
+        run: dotnet run --project DDC.CLI/DDC.CLI.csproj --configuration Release --no-restore -i ${{ steps.read_dofus_version.outputs.dofus_path }} -w ${{ github.workspace }}
+        # -a ${{ github.workspace }}/studio/AssetStudio.CLI.exe
+        # -o C:\Robyn\Git\ankama\AnkaDB
+        # -b G:\Downloads\BepInEx-Unity.IL2CPP-win-x64-6.0.0-be.697+5362580
+        # -v beta -d false
 
-      - name: Copy plugin
-        run: copy DDC.Extractor/bin/Release/net6.0/DDC*.dll ${{ steps.read_dofus_version.outputs.dofus_path }}/BepInEx/plugins
+        # need AssetRipper to extract all bundles to dofus_path/extracted
+        # need Alfred to sanitize json and assets
+        # need to push to AnkaDB (full?) and DofusDB (sanitized?)
 
-      - name: Create BepInEx config folder
-        run: md ${{ steps.read_dofus_version.outputs.dofus_path }}/BepInEx/config -Force
+      # Add this step before the "Run AssetRipper" step
 
-      - name: Write DDC.Extractor configuration
+      - name: Download AssetRipper latest release
         run: |
-          $Configuration = @'
-          [General]
-          OutputDirectory = ./extracted-data
-          '@
-          echo "$Configuration" > ${{ steps.read_dofus_version.outputs.dofus_path }}/BepInEx/config/DDC.Extractor.cfg
+          $AssetRipperUrl = "https://github.com/Souchy/AssetRipper/releases/download/2386364/AssetRipper.CLI.exe"
+          Invoke-WebRequest -Uri $AssetRipperUrl -OutFile "${{ steps.read_dofus_version.outputs.dofus_path }}/AssetRipper.CLI.exe"
 
-      - name: Extract data
-        run: cd ${{ steps.read_dofus_version.outputs.dofus_path }}; node ../scripts/bepinex-run-until "Dofus.exe" "DDC data extraction complete."
+      - name: Run AssetRipper
+        run: |
+          "${{ steps.read_dofus_version.outputs.dofus_path }}/AssetRipper.CLI.exe" -i ${{ steps.read_dofus_version.outputs.dofus_path }}/StreamingAssets/Content/Picto -o ${{ steps.read_dofus_version.outputs.dofus_path }}/extracted
 
+      # - name: Run AssetRipper
+      #   run: dotnet run --project AssetRipper/Source/AssetRipper.CLI.csproj --configuration Release --no-restore -i ${{ steps.read_dofus_version.outputs.dofus_path }}/StreamingAssets/Content/Picto -o ${{ steps.read_dofus_version.outputs.dofus_path }}/extracted
+
+      - name: Check
+        run: ls ${{ steps.read_dofus_version.outputs.dofus_path }}/extracted
+
+      - name: Run Alfred
+        run: npm run sanitize
+
+      # Add metadata
       - name: Create metadata file
         run: |
           $Metadata = @{
@@ -109,30 +127,48 @@ jobs:
           }
           $MetadataJson = $Metadata | ConvertTo-Json
           $null = Write-Host $MetadataJson
-          $null = $MetadataJson | Out-File -FilePath "${{ steps.read_dofus_version.outputs.dofus_path }}/extracted-data/metadata.json"
+          $null = $MetadataJson | Out-File -FilePath "${{ steps.read_dofus_version.outputs.dofus_path }}/extracted/metadata.json"
 
-      - name: Create release archive
-        if: ${{ github.event_name == 'release' }}
-        run: |
-          cd ${{ steps.read_dofus_version.outputs.dofus_path }}/extracted-data
-          7z a data.zip .
-
-      - name: Upload compiled libraries to release
-        if: ${{ github.event_name == 'release' }}
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: ${{ steps.read_dofus_version.outputs.dofus_path }}/extracted-data/data.zip
-          asset_name: data.zip
-          tag: ${{ github.ref }}
-
-      - name: Upload compiled library to artifacts
+      # Upload archives artifacts
+      - name: Upload extracted data to artifacts
         if: ${{ github.event_name != 'release' }}
         uses: actions/upload-artifact@v4
         with:
           name: data
-          path: ${{ steps.read_dofus_version.outputs.dofus_path }}/extracted-data
+          path: ${{ steps.read_dofus_version.outputs.dofus_path }}/extracted/data
           if-no-files-found: 'error'
+
+      - name: Upload extracted assets to artifacts
+        if: ${{ github.event_name != 'release' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: assets
+          path: ${{ steps.read_dofus_version.outputs.dofus_path }}/extracted/assets
+          if-no-files-found: 'warn'
+
+      - name: Upload extracted types to artifacts
+        if: ${{ github.event_name != 'release' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: types
+          path: ${{ github.workspace }}/DDC/Generated
+          if-no-files-found: 'warn'
+
+      # Create release
+      - name: Create release archive
+        if: ${{ github.event_name == 'release' }}
+        run: |
+          cd ${{ steps.read_dofus_version.outputs.dofus_path }}
+          7z a extracted.zip extracted
+
+      - name: Upload archive to release
+        if: ${{ github.event_name == 'release' }}
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ${{ steps.read_dofus_version.outputs.dofus_path }}/extracted.zip
+          asset_name: extracted.zip
+          tag: ${{ github.ref }}
 
 permissions:
   contents: write

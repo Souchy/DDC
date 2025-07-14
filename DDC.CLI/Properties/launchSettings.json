@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "DofusBeta": {
+      "commandName": "Project",
+      "commandLineArgs": "-i C:\\Users\\Blank\\AppData\\Local\\Ankama\\Dofus-beta -b G:\\Downloads\\BepInEx-Unity.IL2CPP-win-x64-6.0.0-be.697+5362580 -w C:\\Robyn\\Git\\ankama\\BPI\\DDC -a G:\\Downloads\\net8.0-c78131309acf598ffce456c0aae17adeccfcc76a\\AssetStudio.CLI.exe -o C:\\Robyn\\Git\\ankama\\AnkaDB -v beta -d false"
+    },
+    "Dofus3": {
+      "commandName": "Project",
+      "commandLineArgs": "-i C:\\Users\\Blank\\AppData\\Local\\Ankama\\Dofus-dofus3 -b G:\\Downloads\\BepInEx-Unity.IL2CPP-win-x64-6.0.0-be.697+5362580 -w C:\\Robyn\\Git\\ankama\\BPI\\DDC -a G:\\Downloads\\net8.0-c78131309acf598ffce456c0aae17adeccfcc76a\\AssetStudio.CLI.exe -o C:\\Robyn\\Git\\ankama\\AnkaDB -d false -v dofus3"
+    }
+  }
+}

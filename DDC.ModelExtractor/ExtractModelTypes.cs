@@ -1,39 +1,33 @@
 ﻿using Core.DataCenter.Metadata.Item;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Reflection;
 using System.Text;
-using System.Threading.Tasks;
-using static MS.Internal.Xml.XPath.QueryBuilder;
 
-namespace DDC.Extractor;
+namespace DDC.ModelExtractor;
+
 public class ExtractModelTypes
 {
     public const BindingFlags bindingFlags = BindingFlags.Instance | BindingFlags.Public;
-    static string path1 = "C:\\Robyn\\Git\\ankama\\BPI\\DDC\\DDC\\Generated\\";
-    static string path2 = Path.Join(Extractor.OutputDirectory, "ddc/cs/");
+
+    static bool polymorphic = false;
+    static string RootFolder
+    {
+        get
+        {
+            return polymorphic ? "GenPolymorphic" : "Generated";
+        }
+    }
 
     public static async Task GetAllModels()
     {
-        //if (Directory.Exists(path1))
-        //    System.IO.Directory.Delete(path1);
-        //if (Directory.Exists(path2))
-        //    System.IO.Directory.Delete(path2);
-        //Directory.CreateDirectory(path1);
-        //Directory.CreateDirectory(path2);
-
-        var assemblies = AppDomain.CurrentDomain.GetAssemblies();
-        var theAss = typeof(Items).Assembly;
-        Extractor.Logger.LogInfo("====== ASSEMBLIES ======");
-        await extractAssembly(theAss);
-        Extractor.Logger.LogInfo("====== DONE WRITE CSHARP ======");
+        var datacenterAssembly = typeof(Items).Assembly;
+        ModelExtractor.Logger.LogInfo("====== ASSEMBLIES ======");
+        await extractAssembly(datacenterAssembly);
+        ModelExtractor.Logger.LogInfo("====== DONE WRITE CSHARP ======");
     }
     static async Task extractAssembly(Assembly ass)
     {
-        Extractor.Logger.LogInfo(ass.FullName);
-        Extractor.Logger.LogInfo("====== TYPES ======");
+        ModelExtractor.Logger.LogInfo(ass.FullName);
+        ModelExtractor.Logger.LogInfo("====== TYPES ======");
         var types = ass.GetTypes();
         //Extractor.Logger.LogInfo(string.Join(", ", types.Where(t => t.FullName.ToLower().StartsWith("Core.DataCenter.Metadata".ToLower())).Select(t => t.FullName)));
         foreach (var t in types)
@@ -52,63 +46,29 @@ public class ExtractModelTypes
                 continue;
             if (t.FullName.EndsWith("Root") || t.Name.StartsWith("__")) // || t.Namespace.EndsWith(".Sound"))
                 continue;
-            //Extractor.Logger.LogInfo(t.FullName);
+            //ModelExtractor.Logger.LogInfo(t.FullName);
 
+            polymorphic = false;
+            await WriteCSharp(t);
+            polymorphic = true;
             await WriteCSharp(t);
             //await WriteProto(t);
         }
     }
 
-    //static async Task WriteProto(Type type)
-    //{
-    //    string path = Path.Join(Extractor.OutputDirectory, "ddc/protos/" + type.Name + ".proto");
-    //    StringBuilder sb = new StringBuilder();
-    //    sb.AppendLine($"message {type.Name} " + "{");
-    //    int i = 1;
-    //    foreach (var prop in type.GetProperties())
-    //    {
-    //        sb.Append('\t');
-
-    //        if (prop.PropertyType.Name.EndsWith("Ptr") || prop.Name == "WasCollected")
-    //            sb.Append("// ");
-
-    //        sb.Append("optional ");
-
-    //        var propType = prop.PropertyType.Name;
-    //        if (prop.PropertyType.IsGenericType)
-    //        {
-    //            sb.Append("repeated ");
-    //            propType = prop.PropertyType.GenericTypeArguments[0].Name;
-    //        }
-    //        if (prop.PropertyType.IsPrimitive)
-    //        {
-    //            propType = propType.ToLower();
-    //        }
-
-    //        sb.Append(propType);
-    //        sb.Append(' ');
-    //        sb.Append(prop.Name);
-
-    //        sb.AppendLine(" = " + i + ";");
-    //        i++;
-    //    }
-    //    sb.Append('}');
-    //    await File.WriteAllTextAsync(path, sb.ToString());
-    //}
 
     static async Task WriteCSharp(Type type)
     {
-        var folder = type.Namespace.Replace(".", "/") + "/";
-        System.IO.Directory.CreateDirectory(path1 + folder);
-        //System.IO.Directory.CreateDirectory(Path.Join(Extractor.OutputDirectory, "ddc/cs/" + folder));
-
-        //string path = Path.Join(Extractor.OutputDirectory, "ddc/cs/" + folder + type.Name + ".cs");
-        string path2 = $"{path1}{folder + type.Name}.cs";
-        //Extractor.Logger.LogInfo("folder: " + folder);
-
-        var str = "";
         try
         {
+            var folderName = type.Namespace.Replace(".", "/");
+            var root = polymorphic ? ModelExtractor.OutputDirectory.Replace("Generated", RootFolder) : ModelExtractor.OutputDirectory;
+            var folderPath = Path.Combine(root, folderName);
+            Directory.CreateDirectory(folderPath);
+            string filePath = $"{folderPath}/{type.Name}.cs";
+            ModelExtractor.Logger.LogInfo(filePath);
+
+            var str = "";
             if (type.IsEnum)
             {
                 str = typeToEnumString(type);
@@ -127,24 +87,33 @@ public class ExtractModelTypes
             {
                 return;
             }
+
             if (!string.IsNullOrWhiteSpace(str))
             {
-                //await File.WriteAllTextAsync(path, str);
-                await File.WriteAllTextAsync(path2, str);
+                var usings = GetUsingsAndNamespace(type, RootFolder);
+                await File.WriteAllTextAsync(filePath, usings + str);
             }
         }
         catch (Exception ex)
         {
-            Extractor.Logger.LogError("Exception WriteCSharp: " + ex.Message + " -> " + ex.StackTrace);
+            ModelExtractor.Logger.LogError("Exception WriteCSharp: " + ex.Message + " -> " + ex.StackTrace);
         }
     }
+
+    //static string typeToJsonDerivedString(Type type)
+    //{
+    //    var types = type.Assembly.GetTypes().Where(t => t.BaseType == type);
+    //    var strings = types.Select(t => $"[System.Text.Json.Serialization.JsonDerivedType(typeof({t.Name}))]");
+    //    var str = string.Join("\n", strings);
+    //    ModelExtractor.Logger.LogInfo($"" + str);
+    //    return str;
+    //}
 
     static string typeToEnumString(Type type)
     {
         try
         {
             StringBuilder sb = new StringBuilder();
-            sb.AppendLine("namespace Generated." + type.Namespace + ";");
             sb.AppendLine($"public enum {type.Name} " + "{");
             var names = type.GetEnumNames();
             var values = type.GetEnumValues();
@@ -161,7 +130,7 @@ public class ExtractModelTypes
         }
         catch (Exception ex)
         {
-            Extractor.Logger.LogError("Exception typeToEnumString (" + type.FullName + "): " + ex.Message + " -> " + ex.StackTrace);
+            ModelExtractor.Logger.LogError("Exception typeToEnumString (" + type.FullName + "): " + ex.Message + " -> " + ex.StackTrace);
             return null;
         }
     }
@@ -170,8 +139,6 @@ public class ExtractModelTypes
         try
         {
             StringBuilder sb = new StringBuilder();
-            sb.AppendLine("using UnityEngine;");
-            sb.AppendLine("namespace Generated." + type.Namespace + ";");
             sb.Append($"public struct {type.Name} ");
             sb.Append('{');
             sb.AppendLine();
@@ -200,35 +167,41 @@ public class ExtractModelTypes
         }
         catch (Exception ex)
         {
-            Extractor.Logger.LogError("Exception typeToStructString (" + type.FullName + "): " + ex.Message + " -> " + ex.StackTrace);
+            ModelExtractor.Logger.LogError("Exception typeToStructString (" + type.FullName + "): " + ex.Message + " -> " + ex.StackTrace);
             return null;
         }
     }
+
+    static string GetUsingsAndNamespace(Type type, string folder)
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.AppendLine("using UnityEngine;");
+        //if (type.FullName == "Core.DataCenter.Metadata.Appearance.SkinSlotsRules")
+        //    sb.AppendLine("using Metadata.Appearance;");
+        if (type.FullName == "Core.DataCenter.Metadata.Sound.SoundBones")
+            sb.AppendLine("using static Core.DataCenter.Metadata.Sound.SoundBones;");
+        //if (type.Name == "SoundBonesDictionary")
+        //{
+        //    return null;
+        //}
+        sb.AppendLine();
+        sb.AppendLine($"namespace {folder}." + type.Namespace + ";");
+        sb.AppendLine();
+        return sb.ToString();
+    }
+
     static string typeToClassString(Type type)
     {
         try
         {
 
             StringBuilder sb = new StringBuilder();
-            sb.AppendLine("using UnityEngine;");
-
-            //if (type.FullName == "Core.DataCenter.Metadata.Appearance.SkinSlotsRules")
-            //    sb.AppendLine("using Metadata.Appearance;");
-            if (type.FullName == "Core.DataCenter.Metadata.Sound.SoundBones")
-                sb.AppendLine("using static Core.DataCenter.Metadata.Sound.SoundBones;");
-            if (type.Name == "SoundBonesDictionary")
-            {
-                return null;
-            }
-
-            sb.AppendLine();
-            sb.AppendLine("namespace Generated." + type.Namespace + ";");
-
+            //sb.AppendLine(typeToJsonDerivedString(type));
             sb.Append($"public class {type.Name} ");
             if (type.BaseType != null && (type.BaseType.FullName.StartsWith("Core.DataCenter") || type.BaseType.FullName.StartsWith("Metadata")))
             {
                 sb.Append(": ");
-                sb.AppendLine(ConvertTypeName(type.BaseType));
+                sb.AppendLine(ConvertTypeName(type.BaseType, true));
             }
             sb.Append('{');
             sb.AppendLine();
@@ -258,7 +231,7 @@ public class ExtractModelTypes
         }
         catch (Exception ex)
         {
-            Extractor.Logger.LogError("Exception typeToClassString: " + ex.Message + " -> " + ex.StackTrace);
+            ModelExtractor.Logger.LogError("Exception typeToClassString: " + ex.Message + " -> " + ex.StackTrace);
             return null;
         }
     }
@@ -281,15 +254,17 @@ public class ExtractModelTypes
         return false;
     }
 
-    static string ConvertTypeName(Type type)
+    static string ConvertTypeName(Type type, bool baseType = false)
     {
+        if (polymorphic && !baseType && !type.IsPrimitive && !type.IsEnum && !type.IsGenericType && type != typeof(String)) return "object";
+
         var propType = type.FullName;
-        if (propType.StartsWith("Core.DataCenter.Metadata")) propType = "Generated." + propType;
-        else if (propType.StartsWith("Core.DataCenter.Types")) propType = "Generated." + propType;
-        else if (propType.StartsWith("Core.DataCenter.Interfaces")) propType = "Generated." + propType;
+        if (propType.StartsWith("Core.DataCenter.Metadata")) propType = RootFolder + "." + propType;
+        else if (propType.StartsWith("Core.DataCenter.Types")) propType = RootFolder + "." + propType;
+        else if (propType.StartsWith("Core.DataCenter.Interfaces")) propType = RootFolder + "." + propType;
         else if (propType.StartsWith("Core.")) propType = type.Name;
-        if (propType.StartsWith("Metadata.Enums")) propType = "Generated." + propType;
-        if (propType.StartsWith("Metadata.Appearance")) propType = "Generated." + propType;
+        if (propType.StartsWith("Metadata.Enums")) propType = RootFolder + "." + propType;
+        if (propType.StartsWith("Metadata.Appearance")) propType = RootFolder + "." + propType;
         else if (propType.StartsWith("Metadata.")) propType = type.Name;
 
         if (propType.EndsWith("Regex"))
@@ -307,7 +282,7 @@ public class ExtractModelTypes
             propType = propType.Substring(0, propType.IndexOf("`"));
             propType = propType.Replace("Il2CppStructArray", "List");
             propType += "<";
-            propType += string.Join(", ", type.GenericTypeArguments.Select(ConvertTypeName));
+            propType += string.Join(", ", type.GenericTypeArguments.Select(a => ConvertTypeName(a)));
             propType += ">";
         }
         return propType;
